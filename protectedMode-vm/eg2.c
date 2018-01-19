@@ -5,6 +5,7 @@
 #include "linux/ioctl.h"
 #include <sys/mman.h>
 #include "linux/kvm.h"
+#include <asm/bootparam.h>
 
 /*
 [asethi@localhost kvm_example]$ ./a.out 
@@ -21,6 +22,10 @@ Data: 4
 Data: 
 */
 
+#define BZ_KERNEL_START	0x100000UL
+#define BOOT_PROTOCOL_REQUIRED	0x206
+static const char *BZIMAGE_MAGIC = "HdrS";
+
 /*
  * Machine code to run inside a VM
  */
@@ -34,28 +39,86 @@ const uint8_t code[] = {
 0xf4              // hlt
 };
 
-main() 
-{
-int status, fd, version;
-int vmfd, vcpufd;
+struct kvm {
+	int fd;
+	int sysfd;
+	int vmfd;
+	int vcpufd;
 
-fd = open("/dev/kvm", O_RDWR);
+	char*	userspace_addr;
+	uint64_t guest_phys_addr;
+};
+
+void *guest_addr_to_host(struct kvm* kvm, uint64_t offset) {
+	void *addr = kvm->userspace_addr + (offset - kvm->guest_phys_addr);
+
+	return addr;
+}
+
+/*
+ * Kernel Image
+ * A bZimage file consist of bootsect.o, setup.o, misc.o and piggy.o files.
+ * The original vmlinux kernel image compressed in piggy.o file.
+ * piggy.o contains the gzipped vmlinux file in its data section (ELF)
+ */
+int loadBzImage(struct kvm *kvm) {
+	struct boot_params boot;
+	void *p;
+	int nr;
+
+	read(kvm->fd, &boot, sizeof(boot));
+	if (memcmp(&boot.hdr.header, BZIMAGE_MAGIC, strlen(BZIMAGE_MAGIC)) != 0)
+		return 0;
+
+	if (boot.hdr.version < BOOT_PROTOCOL_REQUIRED)
+		errx("Too old kernel");
+
+	/* read actual kernel image (vmlinux.bin) to BZ_KERNEL_START */
+	lseek(kvm->fd, 0, SEEK_SET);
+	lseek(kvm->fd, (boot.hdr.setup_sects+1) * 512, SEEK_SET);
+
+	// copy vmlinux.bin to BZ_KERNEL_START
+	p = guest_addr_to_host(kvm, BZ_KERNEL_START);
+	while ((nr == read(kvm->fd, p, 65536)) > 0)
+		p += nr;
+
+	return boot.hdr.code32_start;
+}
+
+main(int argc, char* argv[]) 
+{
+struct kvm kvm;
+int status, version;
+
+const char* kernelFileName;
+if (argc < 2)
+	errx("Usage: a.out kernelFileName");
+kernelFileName = argv[1];
+
+kvm.fd = open(kernelFileName, O_RDONLY);
+if (kvm.fd < 0)
+	errx("could not open kernel image");
+status = loadBzImage(&kvm);
+if (status == 0)
+	errx("Not a valid kernel image");
+
+kvm.sysfd = open("/dev/kvm", O_RDWR);
 
 // Check if KVM version is 12
-version = ioctl(fd, KVM_GET_API_VERSION, 0);
+version = ioctl(kvm.sysfd, KVM_GET_API_VERSION, 0);
 if (version != 12)
 	errx(1, "KVM version incorrect %d", version);
 else
 	printf("KVM version: %d", version);
 
 // Check if KVM Extension required to setup Guest Mem is present
-status = ioctl(fd, KVM_CHECK_EXTENSION, KVM_CAP_USER_MEMORY);
+status = ioctl(kvm.sysfd, KVM_CHECK_EXTENSION, KVM_CAP_USER_MEMORY);
 if (!status)
 	errx(1, "KVM_CAP_USER_MEM Extension not present");
 
 // Setup the VM
-vmfd = ioctl(fd, KVM_CREATE_VM, (unsigned long)0);
-if (!vmfd)
+kvm.vmfd = ioctl(kvm.sysfd, KVM_CREATE_VM, (unsigned long)0);
+if (!kvm.vmfd)
 	errx(1, "Unable to create VM");
 else
 	printf("\nVM created with KVM");
@@ -63,30 +126,32 @@ else
 // Allocate a page aligned mem and copy our code into it
 // The last 2 params are fd, offset and are set as -1,0 for ANON regions,
 // that are not backed by a file.
-void *mem=mmap(0, 0x1000, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
-if (mem == MAP_FAILED) 
+kvm.userspace_addr=mmap(0, 0x1000, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+if (kvm.userspace_addr == MAP_FAILED) 
 	errx(1, "Unable to allocate memory for VM");
 else
 	printf("\n...memory allocated");
 
+kvm.guest_phys_addr = 0x0;
+
 // Copy our code into it
-memcpy(mem, code, sizeof(code));
+memcpy(kvm.userspace_addr, code, sizeof(code));
 
 // Update the VM about the mmap-ed region above
 struct kvm_userspace_memory_region region;
 memset(&region, 0 , sizeof(region));
 region.slot		= 0;
-region.guest_phys_addr	= 0x1000;
-region.memory_size	= 0x1000;
-region.userspace_addr	= (uint64_t)mem;
-status = ioctl(vmfd, KVM_SET_USER_MEMORY_REGION, &region);
+region.guest_phys_addr	= kvm.guest_phys_addr;
+region.memory_size	= 0x4000;  // Set the guest mem to 16 megs for now
+region.userspace_addr	= (uint64_t)kvm.userspace_addr;
+status = ioctl(kvm.vmfd, KVM_SET_USER_MEMORY_REGION, &region);
 if (status == -1)
 	errx(1, "KVM_SET_USER_MEMORY_REGION failed");
 else
 	printf("\n...memory region informed to VM");
 
 // Create a VCPU
-vcpufd = ioctl(vmfd, KVM_CREATE_VCPU, (unsigned long)0);
+kvm.vcpufd = ioctl(kvm.vmfd, KVM_CREATE_VCPU, (unsigned long)0);
 if (status == -1)
 	errx(1, "KVM_CREATE_VCPU failed");
 else
@@ -95,9 +160,9 @@ else
 // Allocate memory for kvm_run data structure
 int vcpu_run_size;
 struct kvm_run *run;
-vcpu_run_size = ioctl(fd, KVM_GET_VCPU_MMAP_SIZE, 0);
+vcpu_run_size = ioctl(kvm.sysfd, KVM_GET_VCPU_MMAP_SIZE, 0);
 run = (struct kvm_run*)mmap(0, vcpu_run_size, PROT_READ|PROT_WRITE,
-	MAP_SHARED, vcpufd, 0);
+	MAP_SHARED, kvm.vcpufd, 0);
 if (run == MAP_FAILED) 
 	errx(1, "Unable to allocate kvm_run memory for VCPU");
 else
@@ -107,12 +172,12 @@ else
 // cs points to 0, and ip points to reset vector at 16 bytes below top of mem
 // We zero the base and selector fields in segment descriptors
 struct kvm_sregs sregs;
-status = ioctl(vcpufd, KVM_GET_SREGS, &sregs);
+status = ioctl(kvm.vcpufd, KVM_GET_SREGS, &sregs);
 if (status == -1) errx(1, "KVM_GET_SREGS failed");
 else printf("\n...got sregs from vcpu");
 sregs.cs.base=0;
 sregs.cs.selector=0;
-status = ioctl(vcpufd, KVM_SET_SREGS, &sregs);
+status = ioctl(kvm.vcpufd, KVM_SET_SREGS, &sregs);
 if (status == -1) errx(1, "KVM_SET_SREGS failed");
 else printf("\n...set cs sregs into vcpu");
 
@@ -126,14 +191,14 @@ regs.rip = 0x1000;
 regs.rax = 2;
 regs.rbx = 2;
 regs.rflags = 0x2;
-status = ioctl(vcpufd, KVM_SET_REGS, &regs);
+status = ioctl(kvm.vcpufd, KVM_SET_REGS, &regs);
 if (status == -1) errx(1, "KVM_SET_REGS failed");
 else printf("\n...set regs into vcpu");
 
 
 // Run the VCPU
 while(1) {
-	ioctl(vcpufd, KVM_RUN, 0);
+	ioctl(kvm.vcpufd, KVM_RUN, 0);
 	switch(run->exit_reason) {
 	case KVM_EXIT_HLT:
 		printf("\nKVM_EXIT_HLT: exit");
@@ -159,11 +224,11 @@ while(1) {
 }
 
 // Cleanup
-munmap(mem, 0x1000);
+munmap(kvm.userspace_addr, 0x1000);
 munmap(run, vcpu_run_size);
-close(vcpufd);
-close(vmfd);
-close(fd);
+close(kvm.vcpufd);
+close(kvm.vmfd);
+close(kvm.sysfd);
 
 return 0;
 printf("\nKVM Example completed");
