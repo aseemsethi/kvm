@@ -1,0 +1,10 @@
+eg2.c is same as eg1.c, but more modular, with functions, vs having one big main(). It also have some code to read in a 2nd arg, a vmlinuz file, but the reading aprt is commented out as of now.
+
+Compile eg1.c as "gcc eg1.c", and run it using
+a.out
+
+Compile eg2.c as "gcc eg2.c", and run it using
+a.out vmlinuz
+
+In this version of eg2.c, the 2nd param, vmlinuz is not read, and its functionality is the same as eg1.c 
+We will enhance eg2.c more as eg3c in ../protectedPaging mode later.
