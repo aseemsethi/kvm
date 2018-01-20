@@ -48,6 +48,8 @@ struct kvm {
 	int vcpu_run_size;
 	struct kvm_run *run;
 
+	// CLI options
+	const char* mode;
 	const char* kernelFileName;
 
 	char*	userspace_addr;
@@ -139,13 +141,16 @@ kvm_alloc_mem(struct kvm *kvm) {
 
 	kvm->guest_phys_addr = 0x1000;
 
-	// Copy our code into it
-	memcpy(kvm->userspace_addr, code, sizeof(code));
-	/*
-  	status = loadBzImage(kvm);
-	if (status == 0)
-		errx("Not a valid kernel image");
-	*/
+	if (strcmp(kvm->mode, "r") == 0) {
+		// Copy our code into it
+		memcpy(kvm->userspace_addr, code, sizeof(code));
+	} else {
+		/*
+  		status = loadBzImage(kvm);
+		if (status == 0)
+			errx("Not a valid kernel image");
+		*/
+	}
 
 	// Update the VM about the mmap-ed region above
 	struct kvm_userspace_memory_region region;
@@ -252,9 +257,10 @@ main(int argc, char* argv[])
 	struct kvm kvm;
 	int status;
 
-	if (argc < 2)
+	if (argc < 3)
 		errx("Usage: a.out kernelFileName");
-	kvm.kernelFileName = argv[1];
+	kvm.mode = argv[1];
+	kvm.kernelFileName = argv[2];
 
 	kvm.fd = open(kvm.kernelFileName, O_RDONLY);
 	if (kvm.fd < 0)
