@@ -1,11 +1,5 @@
-#include "stdio.h"
-#include "stdint.h"
-#include "string.h"
-#include "fcntl.h"
-#include "linux/ioctl.h"
-#include <sys/mman.h>
-#include "linux/kvm.h"
-#include <asm/bootparam.h>
+#include "mykvm.h"
+/* Paging example borrowed from https://github.com/dpw/kvm-hello-world */
 
 /*
 [asethi@localhost kvm_example]$ ./a.out 
@@ -22,7 +16,6 @@ Data: 4
 Data: 
 */
 
-//#define BZ_KERNEL_START	0x100000UL
 #define BZ_KERNEL_START	0x10000UL
 #define BOOT_PROTOCOL_REQUIRED	0x206
 static const char *BZIMAGE_MAGIC = "HdrS";
@@ -40,23 +33,8 @@ const uint8_t code[] = {
 0xf4              // hlt
 };
 
-struct kvm {
-	int fd;
-	int sysfd;
-	int vmfd;
-	int vcpufd;
-	int vcpu_run_size;
-	struct kvm_run *run;
 
-	// CLI options
-	const char* mode;
-	const char* kernelFileName;
-
-	char*	userspace_addr;
-	uint64_t guest_phys_addr;
-};
-
-void *guest_addr_to_host(struct kvm* kvm, uint64_t offset) {
+void *guest_addr_to_host(kvm* kvm, uint64_t offset) {
 	void *addr = kvm->userspace_addr + (offset - kvm->guest_phys_addr);
 
 	return addr;
@@ -68,7 +46,7 @@ void *guest_addr_to_host(struct kvm* kvm, uint64_t offset) {
  * The original vmlinux kernel image compressed in piggy.o file.
  * piggy.o contains the gzipped vmlinux file in its data section (ELF)
  */
-int loadBzImage(struct kvm *kvm) {
+int loadBzImage(kvm *kvm) {
 	struct boot_params boot;
 	void *p;
 	int nr;
@@ -101,7 +79,7 @@ int loadBzImage(struct kvm *kvm) {
 	return boot.hdr.code32_start;
 }
 
-kvm_init(struct kvm *kvm) {
+kvm_init(kvm *kvm) {
 	int status, version;
 
 	kvm->sysfd = open("/dev/kvm", O_RDWR);
@@ -127,7 +105,7 @@ kvm_init(struct kvm *kvm) {
 	return 1;
 }
 
-kvm_alloc_mem(struct kvm *kvm) {
+kvm_alloc_mem(kvm *kvm) {
 	int	status;
 
 	// Allocate a page aligned mem and copy our code into it
@@ -167,7 +145,7 @@ kvm_alloc_mem(struct kvm *kvm) {
 	return 0;
 }
 
-kvm_init_cpu (struct kvm *kvm) {
+kvm_init_cpu (kvm *kvm) {
 	int status;
 
 	// Create a VCPU
@@ -185,6 +163,10 @@ kvm_init_cpu (struct kvm *kvm) {
 		errx(1, "Unable to allocate kvm_run memory for VCPU");
 	else
 		printf("\n...kvm_run memory allocated for vcpu");
+}
+
+kvm_init_realmode_regs (kvm *kvm) {
+	int status;
 
 	// Setup Special Registers - struct kvm_sregs
 	// cs points to 0, and ip points to reset vector at 16 bytes below top of mem
@@ -213,7 +195,9 @@ kvm_init_cpu (struct kvm *kvm) {
 	else printf("\n...set regs into vcpu");
 }
 
-kvm_run(struct kvm *kvm) {
+kvm_run(kvm *kvm) {
+	// dump registers
+	kvm_dump_registers(kvm);
 	// Run the VCPU
 	while(1) {
 		ioctl(kvm->vcpufd, KVM_RUN, 0);
@@ -229,6 +213,8 @@ kvm_run(struct kvm *kvm) {
 				printf("\nData: %s", (char*)kvm->run+kvm->run->io.data_offset);
 			else
 				printf("\nUnhandled KVM_EXIT_IO");
+			// dump registers
+			kvm_dump_registers(kvm);
 			break;
 		case KVM_EXIT_FAIL_ENTRY:
 			printf("\n KVM_EXIT_FAIL_ENTRY: hardware entry fail reason=%x",
@@ -241,6 +227,7 @@ kvm_run(struct kvm *kvm) {
 		}
 	}
 
+
 	// Cleanup
 	munmap(kvm->userspace_addr, 0x1000);
 	munmap(kvm->run, kvm->vcpu_run_size);
@@ -252,9 +239,10 @@ kvm_run(struct kvm *kvm) {
 	printf("\nKVM Example completed");
 }
 
+
 main(int argc, char* argv[]) 
 {
-	struct kvm kvm;
+	kvm kvm;
 	int status;
 
 	if (argc < 3)
@@ -269,6 +257,10 @@ main(int argc, char* argv[])
 	kvm_init(&kvm);
 	kvm_alloc_mem(&kvm);
 	kvm_init_cpu(&kvm);
+	if (strcmp(kvm.mode, "r") == 0)
+		kvm_init_realmode_regs(&kvm);
+	else 
+		run_paged_32bit_mode(&kvm);
 	kvm_run(&kvm);
 }
 
