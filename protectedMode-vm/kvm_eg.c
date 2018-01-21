@@ -111,13 +111,13 @@ kvm_alloc_mem(kvm *kvm) {
 	// Allocate a page aligned mem and copy our code into it
 	// The last 2 params are fd, offset and are set as -1,0 for ANON regions,
 	// that are not backed by a file.
-	kvm->userspace_addr=mmap(0, 0x1000, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+	kvm->userspace_addr=mmap(0, kvm->guestmem_size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
 	if (kvm->userspace_addr == MAP_FAILED) 
 		errx(1, "Unable to allocate memory for VM");
 	else
 		printf("\n...memory allocated at userspace_mem:%x", (uint64_t)kvm->userspace_addr);
 
-	kvm->guest_phys_addr = 0x1000;
+	kvm->guest_phys_addr = kvm->guest_phys_start;
 
 	if (strcmp(kvm->mode, "r") == 0) {
 		// Copy our code into it
@@ -135,7 +135,7 @@ kvm_alloc_mem(kvm *kvm) {
 	memset(&region, 0 , sizeof(region));
 	region.slot		= 0;
 	region.guest_phys_addr	= kvm->guest_phys_addr;
-	region.memory_size	= 0x1000;  // Set the guest mem to 16 megs for now
+	region.memory_size	= kvm->guestmem_size;  // Set the guest mem to 16 megs for now
 	region.userspace_addr	= (uint64_t)kvm->userspace_addr;
 	status = ioctl(kvm->vmfd, KVM_SET_USER_MEMORY_REGION, &region);
 	if (status == -1)
@@ -182,11 +182,11 @@ kvm_init_realmode_regs (kvm *kvm) {
 	else printf("\n...set cs sregs into vcpu");
 
 	// Setup Standard Registers - struct kvm_regs
-	// We set all regs to 0, ip points to our code at 0x1000, relative to 0x0,
+	// We set all regs to 0, ip points to our code at guest_phys_start, relative to 0x0,
 	// our addends 2 and 2, and initial flags at 2
 	struct kvm_regs regs;
 	memset(&regs, 0, sizeof(regs));
-	regs.rip = 0x1000;
+	regs.rip = kvm->guest_phys_start;
 	regs.rax = 2;
 	regs.rbx = 2;
 	regs.rflags = 0x2;
@@ -229,7 +229,7 @@ kvm_run(kvm *kvm) {
 
 
 	// Cleanup
-	munmap(kvm->userspace_addr, 0x1000);
+	munmap(kvm->userspace_addr, kvm->guestmem_size);
 	munmap(kvm->run, kvm->vcpu_run_size);
 	close(kvm->vcpufd);
 	close(kvm->vmfd);
@@ -254,6 +254,10 @@ main(int argc, char* argv[])
 	if (kvm.fd < 0)
 		errx("could not open kernel image");
 
+	if (strcmp(kvm.mode, "r") == 0) {
+		kvm.guest_phys_start = 0x1000;
+		kvm.guestmem_size = 0x1000;
+	}
 	kvm_init(&kvm);
 	kvm_alloc_mem(&kvm);
 	kvm_init_cpu(&kvm);
