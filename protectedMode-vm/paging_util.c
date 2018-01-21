@@ -83,3 +83,21 @@ int run_paged_32bit_mode(kvm *kvm) {
 	if (status == -1)
 		printf("\n Protected Mode: setting SET_REGS failed");
 }
+
+
+/******
+ * Running protected mode gives us the following perf events...
+ *
+ [root@localhost ~]# perf stat -e 'kvm:*' -a sleep 5
+ Performance counter stats for 'system wide':
+                 5      kvm:kvm_entry                                        
+                 5      kvm:kvm_exit                                      
+                 3      kvm:kvm_page_fault                                
+                 1      kvm:kvm_cr                                        
+                 1      kvm:kvm_write_tsc_offset                          
+                 2      kvm:kvm_update_master_clock                         
+                 1      kvm:kvm_track_tsc                                 
+                 1      kvm:kvm_userspace_exit                            
+                 2      kvm:kvm_fpu                                       
+[root@localhost ~]#  
+*/
