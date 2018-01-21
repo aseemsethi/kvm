@@ -102,6 +102,10 @@ kvm_init(kvm *kvm) {
 	else
 		printf("\nVM created with KVM");
 
+	status = ioctl(kvm->sysfd, KVM_SET_TSS_ADDR, 0xfffbd000);
+	if (!status)
+		errx(1, "KVM_SET_TSS_ADDR Failed");
+
 	return 1;
 }
 
@@ -207,7 +211,7 @@ check_protected_mode_result(kvm *kvm) {
 		printf("\n Protected Mode: Correct result at reg ax: %lld",
 				regs.rax);
 	}
-	memcpy(&memval, &kvm->userspace_addr[400], sizeof(uint64_t));
+	memcpy(&memval, &kvm->userspace_addr[0x400], 4);
 	if (memval != 42) {
 		printf("\n Protected Mode: Wrong result at loc 400: %lld",
 				memval);
@@ -215,6 +219,7 @@ check_protected_mode_result(kvm *kvm) {
 	} else {
 		printf("\n Protected Mode: Correct result at loc 400: %lld",
 				memval);
+		printf("\n Protected Mode Passed !! \n");
 	}
 }
 
@@ -222,11 +227,16 @@ kvm_run(kvm *kvm) {
 	// dump registers
 	kvm_dump_registers(kvm);
 	// Run the VCPU
+	printf("\n...KVM_RUN !");
 	while(1) {
 		ioctl(kvm->vcpufd, KVM_RUN, 0);
 		switch(kvm->run->exit_reason) {
 		case KVM_EXIT_HLT:
 			printf("\nKVM_EXIT_HLT: exit");
+			if (strcmp(kvm->mode, "p") == 0) {
+				printf("\n protected mode: check result...");
+				check_protected_mode_result(kvm);
+			}
 			return 0;
 		case KVM_EXIT_IO:
 			if (kvm->run->io.direction == KVM_EXIT_IO_OUT &&
@@ -251,9 +261,6 @@ kvm_run(kvm *kvm) {
 	}
 
 
-	if (strcmp(kvm->mode, "p") == 0) {
-		check_protected_mode_result(kvm);
-	}
 	// Cleanup
 	munmap(kvm->userspace_addr, kvm->guestmem_size);
 	munmap(kvm->run, kvm->vcpu_run_size);
@@ -265,6 +272,7 @@ kvm_run(kvm *kvm) {
 	printf("\nKVM Example completed");
 }
 
+extern const unsigned char code32_paged[], code32_paged_end[];
 main(int argc, char* argv[]) 
 {
 	kvm kvm;
@@ -280,18 +288,25 @@ main(int argc, char* argv[])
 
 	kvm.fd = open(kvm.kernelFileName, O_RDONLY);
 	if (kvm.fd < 0)
-		errx("could not open kernel image");
+	errx("could not open kernel image");
 	if (mode == REALMODE) {
 		kvm.guest_phys_start = 0x1000;
-		kvm.guestmem_size = 0x1000;
+		kvm.guestmem_size = 0x1000; // 4KBytes memory
+	} else {
+		kvm.guest_phys_start = 0x0;
+		kvm.guestmem_size = 0x100000; // 1 Meg memory
 	}
 	kvm_init(&kvm);
 	kvm_alloc_mem(&kvm);
 	kvm_init_cpu(&kvm);
 	if (mode == REALMODE)
 		kvm_init_realmode_regs(&kvm);
-	else 
+	else {
+		printf("\nNo. of code bytes to copy: %d", code32_paged_end - code32_paged);
+		memcpy(kvm.userspace_addr, code32_paged, 
+					code32_paged_end - code32_paged);
 		run_paged_32bit_mode(&kvm);
+	}
 	kvm_run(&kvm);
 }
 
