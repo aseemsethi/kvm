@@ -7,6 +7,9 @@
 #include "linux/kvm.h"
 #include <asm/bootparam.h>
 
+#define REALMODE 0
+#define PROTMODE 1
+
 typedef struct kvm_t {
 	int fd;
 	int sysfd;

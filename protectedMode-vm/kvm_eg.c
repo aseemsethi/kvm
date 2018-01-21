@@ -193,6 +193,31 @@ kvm_init_realmode_regs (kvm *kvm) {
 	else printf("\n...set regs into vcpu");
 }
 
+check_protected_mode_result(kvm *kvm) {
+	struct kvm_regs regs;
+	int status;	
+	uint64_t memval;
+
+	status = ioctl(kvm->vcpufd, KVM_GET_REGS, &regs);
+	if (regs.rax != 42) {
+		printf("\n Protected Mode: Wrong result at reg ax: %lld",
+				regs.rax);
+		return 0;
+	} else {
+		printf("\n Protected Mode: Correct result at reg ax: %lld",
+				regs.rax);
+	}
+	memcpy(&memval, &kvm->userspace_addr[400], sizeof(uint64_t));
+	if (memval != 42) {
+		printf("\n Protected Mode: Wrong result at loc 400: %lld",
+				memval);
+		return 0;
+	} else {
+		printf("\n Protected Mode: Correct result at loc 400: %lld",
+				memval);
+	}
+}
+
 kvm_run(kvm *kvm) {
 	// dump registers
 	kvm_dump_registers(kvm);
@@ -226,6 +251,9 @@ kvm_run(kvm *kvm) {
 	}
 
 
+	if (strcmp(kvm->mode, "p") == 0) {
+		check_protected_mode_result(kvm);
+	}
 	// Cleanup
 	munmap(kvm->userspace_addr, kvm->guestmem_size);
 	munmap(kvm->run, kvm->vcpu_run_size);
@@ -237,29 +265,30 @@ kvm_run(kvm *kvm) {
 	printf("\nKVM Example completed");
 }
 
-
 main(int argc, char* argv[]) 
 {
 	kvm kvm;
-	int status;
+	int status, mode;
 
 	if (argc < 3)
 		errx("Usage: a.out kernelFileName");
 	kvm.mode = argv[1];
 	kvm.kernelFileName = argv[2];
+	if (strcmp(kvm.mode, "r") == 0)
+		mode = REALMODE;
+	else mode = PROTMODE;
 
 	kvm.fd = open(kvm.kernelFileName, O_RDONLY);
 	if (kvm.fd < 0)
 		errx("could not open kernel image");
-
-	if (strcmp(kvm.mode, "r") == 0) {
+	if (mode == REALMODE) {
 		kvm.guest_phys_start = 0x1000;
 		kvm.guestmem_size = 0x1000;
 	}
 	kvm_init(&kvm);
 	kvm_alloc_mem(&kvm);
 	kvm_init_cpu(&kvm);
-	if (strcmp(kvm.mode, "r") == 0)
+	if (mode == REALMODE)
 		kvm_init_realmode_regs(&kvm);
 	else 
 		run_paged_32bit_mode(&kvm);
