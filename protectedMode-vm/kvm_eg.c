@@ -35,7 +35,7 @@ const uint8_t code[] = {
 
 
 void *guest_addr_to_host(kvm* kvm, uint64_t offset) {
-	void *addr = kvm->userspace_addr + (offset - kvm->guest_phys_addr);
+	void *addr = kvm->userspace_addr + (offset - kvm->guest_phys_start);
 
 	return addr;
 }
@@ -117,8 +117,6 @@ kvm_alloc_mem(kvm *kvm) {
 	else
 		printf("\n...memory allocated at userspace_mem:%x", (uint64_t)kvm->userspace_addr);
 
-	kvm->guest_phys_addr = kvm->guest_phys_start;
-
 	if (strcmp(kvm->mode, "r") == 0) {
 		// Copy our code into it
 		memcpy(kvm->userspace_addr, code, sizeof(code));
@@ -134,7 +132,7 @@ kvm_alloc_mem(kvm *kvm) {
 	struct kvm_userspace_memory_region region;
 	memset(&region, 0 , sizeof(region));
 	region.slot		= 0;
-	region.guest_phys_addr	= kvm->guest_phys_addr;
+	region.guest_phys_addr	= kvm->guest_phys_start;
 	region.memory_size	= kvm->guestmem_size;  // Set the guest mem to 16 megs for now
 	region.userspace_addr	= (uint64_t)kvm->userspace_addr;
 	status = ioctl(kvm->vmfd, KVM_SET_USER_MEMORY_REGION, &region);

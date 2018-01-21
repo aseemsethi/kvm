@@ -22,5 +22,4 @@ typedef struct kvm_t {
 	char*	userspace_addr;
 	int	guestmem_size;
 	int	guest_phys_start;
-	uint64_t guest_phys_addr;
 } kvm;
