@@ -236,6 +236,7 @@ kvm_run(kvm *kvm) {
 			if (strcmp(kvm->mode, "p") == 0) {
 				printf("\n protected mode: check result...");
 				check_protected_mode_result(kvm);
+				kvm_cpu__show_registers(kvm);
 			}
 			return 0;
 		case KVM_EXIT_IO:

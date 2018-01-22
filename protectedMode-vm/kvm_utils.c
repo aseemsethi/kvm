@@ -9,8 +9,8 @@ static void print_dtable(const char *name, struct kvm_dtable *dtable)
 static void print_segment(const char *name, struct kvm_segment *seg)
 {
 	printf(" %s       %04hx      %016llx  %08x  %02hhx    %x %x   %x  %x %x %x %x\n",
-		name, (uint16_t) seg->selector, (uint64_t) seg->base, (uint32_t) seg->limit,
-		(uint8_t) seg->type, seg->present, seg->dpl, seg->db, seg->s, seg->l, seg->g, seg->avl);
+	name, (uint16_t) seg->selector, (uint64_t) seg->base, (uint32_t) seg->limit,
+	(uint8_t) seg->type, seg->present, seg->dpl, seg->db, seg->s, seg->l, seg->g, seg->avl);
 }
 
 void kvm_cpu__show_registers(kvm *kvm)
