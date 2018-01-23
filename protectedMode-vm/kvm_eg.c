@@ -258,6 +258,9 @@ kvm_run(kvm *kvm) {
 			printf("\nKVM_EXIT_INTERNAL_ERROR: suberror = %x",
 			kvm->run->internal.suberror);
 			return 1;
+		case KVM_EXIT_DEBUG:
+			kvm_dump_registers(kvm);
+			return 1;
 		}
 	}
 
@@ -278,7 +281,7 @@ main(int argc, char* argv[])
 {
 	kvm kvm;
 	int status, c;
-	int mode = 0;
+	int mode = -1;
 
 	const char *short_opt = "rpf:";
 	struct option long_opt[] = 
@@ -294,15 +297,17 @@ main(int argc, char* argv[])
 	case 0:  // long option toggles
 		break;
 	case 'r': 
-		printf("\n Option R selected"); break;
+		printf("\n Option R selected");
 		kvm.mode = "r"; mode = REALMODE;
 		kvm.guest_phys_start = 0x1000;
 		kvm.guestmem_size = 0x1000; // 4KBytes memory
+		break;
 	case 'p':
-		printf("\n Option P selected"); break;
+		printf("\n Option P selected");
 		kvm.mode = "p"; mode = PROTMODE;
 		kvm.guest_phys_start = 0x0;
 		kvm.guestmem_size = 0x100000; // 1 Meg memory
+		break;
 	case 'f':
 		printf("Option F entered with \"%s\"\n", optarg);
 		kvm.kernelFileName = argv[2];
@@ -312,7 +317,7 @@ main(int argc, char* argv[])
 		}
 	}
 	}
-	if (mode == 0) {
+	if (mode == -1) {
 		printf("\n Please select the exec mode"); fflush(stdout); errx("exiting...");
 	}
 	kvm_init(&kvm);
