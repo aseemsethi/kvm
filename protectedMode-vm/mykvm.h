@@ -6,6 +6,7 @@
 #include <sys/mman.h>
 #include "linux/kvm.h"
 #include <asm/bootparam.h>
+#include <getopt.h>
 
 #define REALMODE 0
 #define PROTMODE 1
@@ -17,6 +18,9 @@ typedef struct kvm_t {
 	int vcpufd;
 	int vcpu_run_size;
 	struct kvm_run *run;
+
+	struct kvm_regs regs;
+	struct kvm_sregs sregs;
 
 	// CLI options
 	const char* mode;

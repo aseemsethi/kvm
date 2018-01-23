@@ -277,25 +277,43 @@ extern const unsigned char code32_paged[], code32_paged_end[];
 main(int argc, char* argv[]) 
 {
 	kvm kvm;
-	int status, mode;
+	int status, c;
+	int mode = 0;
 
-	if (argc < 3)
-		errx("Usage: a.out kernelFileName");
-	kvm.mode = argv[1];
-	kvm.kernelFileName = argv[2];
-	if (strcmp(kvm.mode, "r") == 0)
-		mode = REALMODE;
-	else mode = PROTMODE;
-
-	kvm.fd = open(kvm.kernelFileName, O_RDONLY);
-	if (kvm.fd < 0)
-	errx("could not open kernel image");
-	if (mode == REALMODE) {
+	const char *short_opt = "rpf:";
+	struct option long_opt[] = 
+	{
+		{"real",	no_argument,	NULL, 'r'},
+		{"protect",	no_argument,	NULL, 'p'},
+		{"file",	required_argument,	NULL, 'f'},
+		{NULL, 		0,				NULL,	0}
+	};
+	while((c=getopt_long(argc, argv, short_opt, long_opt, NULL)) != -1) {
+	switch(c) {
+	case -1: // no args
+	case 0:  // long option toggles
+		break;
+	case 'r': 
+		printf("\n Option R selected"); break;
+		kvm.mode = "r"; mode = REALMODE;
 		kvm.guest_phys_start = 0x1000;
 		kvm.guestmem_size = 0x1000; // 4KBytes memory
-	} else {
+	case 'p':
+		printf("\n Option P selected"); break;
+		kvm.mode = "p"; mode = PROTMODE;
 		kvm.guest_phys_start = 0x0;
 		kvm.guestmem_size = 0x100000; // 1 Meg memory
+	case 'f':
+		printf("Option F entered with \"%s\"\n", optarg);
+		kvm.kernelFileName = argv[2];
+		kvm.fd = open(kvm.kernelFileName, O_RDONLY);
+		if (kvm.fd < 0) {
+			printf("\nCould not open kernel image"); fflush(stdout); errx("exiting...");
+		}
+	}
+	}
+	if (mode == 0) {
+		printf("\n Please select the exec mode"); fflush(stdout); errx("exiting...");
 	}
 	kvm_init(&kvm);
 	kvm_alloc_mem(&kvm);
@@ -304,8 +322,7 @@ main(int argc, char* argv[])
 		kvm_init_realmode_regs(&kvm);
 	else {
 		printf("\nNo. of code bytes to copy: %d", code32_paged_end - code32_paged);
-		memcpy(kvm.userspace_addr, code32_paged, 
-					code32_paged_end - code32_paged);
+		memcpy(kvm.userspace_addr, code32_paged, code32_paged_end - code32_paged);
 		run_paged_32bit_mode(&kvm);
 	}
 	kvm_run(&kvm);
