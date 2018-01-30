@@ -215,6 +215,8 @@ check_protected_mode_result(kvm *kvm) {
 				memval);
 		printf("\n Protected Mode Passed !! \n");
 	}
+	memcpy(&memval, &kvm->userspace_addr[0x2000], 4);
+	printf("\n Protected Mode: CR3 at 0x2000: %x", memval);
 }
 
 kvm_run(kvm *kvm) {

@@ -1,7 +1,8 @@
 
+ Option P selected
 KVM version: 12
 VM created with KVM
-...memory allocated at userspace_mem:94b4c000
+...memory allocated at userspace_mem:b56c1000
 ...memory region informed to VM
 ...VCPU Created
 ...kvm_run memory allocated for vcpu
@@ -24,6 +25,7 @@ KVM_EXIT_HLT: exit
  Protected Mode: Correct result at loc 400: 42
  Protected Mode Passed !! 
 
+ Protected Mode: CR3 at 0x2000: e7
  Registers:
  ----------
  rip: 0000000000000016   rsp: 0000000000000000 flags: 0000000000000086
