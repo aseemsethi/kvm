@@ -1,0 +1,18 @@
+Code taken from - kvmtools package
+https://github.com/clearlinux/kvmtool/commit/3d2312e5077c1e519b24124a7eb85a3ad67caa6b
+
+You can simply type:
+  $ make
+to build a 16-bit binary that uses the i8086 instruction set.
+
+Disassembling
+-------------
+
+Use the "-m i8086" command line option with objdump to make sure it knows we're
+dealing with i8086 instruction set:
+
+  $ objdump -d -m i8086 i8086.elf
+
+Convert to C language array by:
+[asethi@localhost kernel]$ ./bin2c -i ../kernel/kernel.bin -o as
+
