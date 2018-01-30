@@ -30,8 +30,6 @@ typedef struct kvm_t {
 	char*	userspace_addr;
 	int	guestmem_size;
 	int	guest_phys_start;
-
-	struct kvm_regs regs;
 } kvm;
 
 /* CR0 bits */
