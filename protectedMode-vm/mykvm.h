@@ -15,6 +15,7 @@ typedef struct kvm_t {
 	int sysfd;
 	int vmfd;
 	int vcpufd;
+	int codeLen;
 	int vcpu_run_size;
 	struct kvm_run *run;
 
@@ -25,6 +26,8 @@ typedef struct kvm_t {
 	char*	userspace_addr;
 	int	guestmem_size;
 	int	guest_phys_start;
+
+	struct kvm_regs regs;
 } kvm;
 
 /* CR0 bits */

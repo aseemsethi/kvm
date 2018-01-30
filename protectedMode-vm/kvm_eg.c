@@ -46,7 +46,7 @@ void *guest_addr_to_host(kvm* kvm, uint64_t offset) {
  * The original vmlinux kernel image compressed in piggy.o file.
  * piggy.o contains the gzipped vmlinux file in its data section (ELF)
  */
-int loadBzImage(kvm *kvm) {
+uint64_t loadBzImage(kvm *kvm) {
 	struct boot_params boot;
 	void *p;
 	int nr;
@@ -124,12 +124,6 @@ kvm_alloc_mem(kvm *kvm) {
 	if (strcmp(kvm->mode, "r") == 0) {
 		// Copy our code into it
 		memcpy(kvm->userspace_addr, code, sizeof(code));
-	} else {
-		/*
-  		status = loadBzImage(kvm);
-		if (status == 0)
-			errx("Not a valid kernel image");
-		*/
 	}
 
 	// Update the VM about the mmap-ed region above
@@ -300,13 +294,21 @@ main(int argc, char* argv[])
 	kvm_init(&kvm);
 	kvm_alloc_mem(&kvm);
 	kvm_init_cpu(&kvm);
+	kvm_enable_singlestep(&kvm);
 	if (mode == REALMODE)
 		kvm_init_realmode_regs(&kvm);
-	else {
+	else if (mode == PROTMODE) {
 		printf("\nNo. of code bytes to copy: %d", code32_paged_end - code32_paged);
+		kvm.codeLen = code32_paged_end - code32_paged;
 		memcpy(kvm.userspace_addr, code32_paged, 
 					code32_paged_end - code32_paged);
 		run_paged_32bit_mode(&kvm);
+	} else {
+		/*
+	  	status = loadBzImage(kvm);
+		if (status == 0)
+			errx("Not a valid kernel image");
+		*/
 	}
 	kvm_run(&kvm);
 }

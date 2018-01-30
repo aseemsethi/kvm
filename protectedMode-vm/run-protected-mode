@@ -1,0 +1,54 @@
+
+KVM version: 12
+VM created with KVM
+...memory allocated at userspace_mem:94b4c000
+...memory region informed to VM
+...VCPU Created
+...kvm_run memory allocated for vcpu
+ KVM Single Stepping Enabled
+No. of code bytes to copy: 22
+...setting up protected mode
+...setting up paged 32 bit mode
+ Dumping Registers:Registers:
+ rip: 0000000000000000   rsp: 0000000000000000
+ rax: 0000000000000000   ebx: 0000000000000000   ecx: 0000000000000000
+ rdx: 0000000000000000   rsi: 0000000000000000   rdi: 0000000000000000
+ rbp: 0000000000000000   r8:  0000000000000000   r9:  0000000000000000
+ r10: 0000000000000000   r11: 0000000000000000   r12: 0000000000000000
+ r13: 0000000000000000   r14: 0000000000000000   r15: 0000000000000000
+
+...KVM_RUN !
+KVM_EXIT_HLT: exit
+ protected mode: check result...
+ Protected Mode: Correct result at reg ax: 42
+ Protected Mode: Correct result at loc 400: 42
+ Protected Mode Passed !! 
+
+ Registers:
+ ----------
+ rip: 0000000000000016   rsp: 0000000000000000 flags: 0000000000000086
+ rax: 000000000000002a   rbx: 0000000000000000   rcx: 0000000000000000
+ rdx: 0000000000000000   rsi: 0000000000000000   rdi: 0000000000000000
+ rbp: 0000000000000000    r8: 0000000000000000    r9: 0000000000000000
+ r10: 0000000000000000   r11: 0000000000000000   r12: 0000000000000000
+ r13: 0000000000000000   r14: 0000000000000000   r15: 0000000000000000
+ cr0: 0000000080050033   cr2: 0000000000000000   cr3: 0000000000002000
+ cr4: 0000000000000010   cr8: 0000000000000000
+
+ Segment registers:
+ ------------------
+ register  selector  base              limit     type  p dpl db s l g avl
+ cs        0008      0000000000000000  ffffffff  0b    1 0   1  1 0 1 0
+ ss        0010      0000000000000000  ffffffff  03    1 0   1  1 0 1 0
+ ds        0010      0000000000000000  ffffffff  03    1 0   1  1 0 1 0
+ es        0010      0000000000000000  ffffffff  03    1 0   1  1 0 1 0
+ fs        0010      0000000000000000  ffffffff  03    1 0   1  1 0 1 0
+ gs        0010      0000000000000000  ffffffff  03    1 0   1  1 0 1 0
+ tr        0000      0000000000000000  0000ffff  0b    1 0   0  0 0 0 0
+ ldt       0000      0000000000000000  0000ffff  02    1 0   0  0 0 0 0
+ gdt                 0000000000001000  00000017
+ idt                 0000000000000000  0000ffff
+
+ Interrupt bitmap:
+ -----------------
+ 0000000000000000 0000000000000000 0000000000000000 0000000000000000

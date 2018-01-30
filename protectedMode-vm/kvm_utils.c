@@ -1,5 +1,14 @@
 #include "mykvm.h"
 
+void kvm_enable_singlestep(kvm *kvm) {
+	struct kvm_guest_debug debug = {
+		.control = KVM_GUESTDBG_ENABLE | KVM_GUESTDBG_SINGLESTEP,
+	};
+	if (ioctl(kvm->vcpufd, KVM_SET_GUEST_DEBUG, &debug) < 0)
+		errx("KVM_SET_GUEST_DEBUG failed");
+	printf("\n KVM Single Stepping Enabled");
+}
+
 static void print_dtable(const char *name, struct kvm_dtable *dtable)
 {
 	printf(" %s                 %016llx  %08hx\n",
@@ -30,6 +39,8 @@ void kvm_cpu__show_registers(kvm *kvm)
 
 	if (ioctl(kvm->vcpufd, KVM_GET_REGS, &regs) < 0)
 		errx("KVM_GET_REGS failed");
+
+	memcpy(&kvm->regs, &regs, sizeof(regs));
 
 	rflags = regs.rflags;
 

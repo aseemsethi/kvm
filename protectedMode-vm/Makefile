@@ -1,4 +1,4 @@
-CC=gcc
+CC=gcc -g
 CFLAGS=-I.
 DEPS = mykvm.h
 OBJ = kvm_eg.o kvm_utils.o paging_util.c payload.o
