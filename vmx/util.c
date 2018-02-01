@@ -1,4 +1,6 @@
-int getCpuid (unsigned int *eax, unsigned int *ebx,
+#include "wiser.h"
+
+void getCpuid (unsigned int *eax, unsigned int *ebx,
 		 unsigned int *ecx, unsigned int *edx) {
 	// ecx is input and output
 	asm volatile("cpuid"
@@ -20,8 +22,9 @@ int getCpuid (unsigned int *eax, unsigned int *ebx,
  * 19:16 – Extended Model
  * 27:20 – Extended Family
  */
-int main(int argc, char **argv) {
+void getProcCpuid(void) {
 	unsigned eax, ebx, ecx, edx;
+	ecx = 0x0;
 
 	eax = 1; // proc info
 	getCpuid(&eax, &ebx, &ecx, &edx);

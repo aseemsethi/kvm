@@ -1,0 +1,1 @@
+cmd_/home/asethi/kvm-examples/vmx/wiser.o := ld -m elf_x86_64   -r -o /home/asethi/kvm-examples/vmx/wiser.o /home/asethi/kvm-examples/vmx/main.o /home/asethi/kvm-examples/vmx/util.o ; scripts/mod/modpost /home/asethi/kvm-examples/vmx/wiser.o
