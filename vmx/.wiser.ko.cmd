@@ -1,1 +1,0 @@
-cmd_/home/asethi/kvm-examples/vmx/wiser.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /home/asethi/kvm-examples/vmx/wiser.ko /home/asethi/kvm-examples/vmx/wiser.o /home/asethi/kvm-examples/vmx/wiser.mod.o
