@@ -1,0 +1,14 @@
+Following 3 links have nice tutorials, from where examples in this directory
+have been taken
+
+https://github.com/dweinstein/vmxos-osx/blob/master/src/kernel/vmx/vmx_hw.asm
+
+Writing a hypervisor
+http://www.dumais.io/index.php?article=ac3267239dd3e34c061de6413203fb98
+https://gist.github.com/pdumais/190abac0353618062b5d36807d6b7687#file-vmx-s
+
+https://www.codeproject.com/Articles/215458/Virtualization-for-System-Programmers
+
+----
+
+
