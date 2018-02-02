@@ -8,9 +8,10 @@ MODULE_VERSION("0.1");       // The version of the module
 static char *name = "world";
 module_param(name, charp, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(name, "Name to display");
+void getProcCpuid(void);
 int wiser_init(void) {
 	printk("\n Module wiser %s loaded", name);
-	//getProcCpuid();
+	getProcCpuid();
 	return 0;
 }
 
