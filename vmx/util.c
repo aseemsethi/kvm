@@ -52,7 +52,21 @@ void writeCr0(unsigned long val) {
 }
 
 /*
- * READ MSRs
+ * READ MSRs// 30:00 VMCS revision id
+ *  31:31 shadow VMCS indicator
+ *  -----------------------------
+ *  32:47 VMCS region size, 0 <= size <= 4096
+ *  48:48 use 32-bit physical address, set when x86_64 disabled
+ *  49:49 support of dual-monitor treatment of SMI and SMM
+ *  53:50 memory type used for VMCS access
+ *  54:54 logical processor reports information in the VM-exit 
+ *        instruction-information field on VM exits due to
+ *        execution of INS/OUTS
+ *  55:55 set if any VMX controls that default to `1 may be
+ *        cleared to `0, also indicates that IA32_VMX_TRUE_PINBASED_CTLS,
+ *        IA32_VMX_TRUE_PROCBASED_CTLS, IA32_VMX_TRUE_EXIT_CTLS and
+ *        IA32_VMX_TRUE_ENTRY_CTLS MSRs are supported.
+ *  56:63 reserved, must be zero
  */
 void getMSR(u32 msr, u32 *low, u32 *hi) {
 	uint32_t vmcs_num_bytes;
