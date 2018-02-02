@@ -78,7 +78,7 @@ void getMSR(u32 msr, u32 *low, u32 *hi) {
 
 	asm volatile("rdmsr" : "=a"(*low), "=d"(*hi) : "c"(msr));
 	printk("msr=0x%x, hi=%x lo=%x\n", msr, *hi, *low);
-	vmcs_num_bytes  =  (msr >> 32 ) & 0xfff; // Bits 44:32
+	vmcs_num_bytes  =  *hi & 0xfff; // Bits 44:32
 	printk("vmcs_num_bytes = 0x%x", vmcs_num_bytes);
 }
   
