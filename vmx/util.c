@@ -39,3 +39,39 @@ void getProcCpuid(void) {
 	getCpuid(&eax, &ebx, &ecx, &edx);
 	printk("Serial Number 0x%08x%08x\n", edx, ecx);
 }
+  
+void getCrRegs(void) {
+#ifdef __x86_64__
+	u64 cr0, cr2, cr3;
+	printk("x86_64 mode\n");
+	asm volatile (
+		"mov %%cr0, %%rax\n\t"
+		"mov %%eax, %0\n\t"
+		"mov %%cr2, %%rax\n\t"
+		"mov %%eax, %1\n\t"
+		"mov %%cr4, %%rax\n\t"
+		"mov %%eax, %2\n\t"
+	:	"=m" (cr0), "=m" (cr2), "=m" (cr3)
+	:	/* no input */
+	:	"%rax"
+	);
+#elif defined(__i386__)
+	printk("x86 i386 mode\n");
+	u32 cr0, cr2, cr3;
+	printk("x86_64 mode\n");
+	asm volatile (
+		"mov %%cr0, %%eax\n\t"
+		"mov %%eax, %0\n\t"
+		"mov %%cr2, %%eax\n\t"
+		"mov %%eax, %1\n\t"
+		"mov %%cr4, %%eax\n\t"
+		"mov %%eax, %2\n\t"
+	:	"=m" (cr0), "=m" (cr2), "=m" (cr3)
+	:	/* no input */
+	:	"%eax"
+	);
+#endif
+	printk("cr0 = 0x%llx\n", cr0);
+	printk("cr2 = 0x%llx\n", cr2);
+	printk("cr3 = 0x%llx\n", cr3);
+}
