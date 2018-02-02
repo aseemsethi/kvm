@@ -9,9 +9,13 @@ static char *name = "world";
 module_param(name, charp, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(name, "Name to display");
 int wiser_init(void) {
+	u32 low, hi;
+
 	printk("\n Module wiser %s loaded", name);
 	getProcCpuid();
 	getCrRegs();
+	//writeCr0(0x0);
+	getMSR(0x480, &low, &hi);
 	return 0;
 }
 

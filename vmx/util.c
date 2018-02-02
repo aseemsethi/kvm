@@ -39,6 +39,25 @@ void getProcCpuid(void) {
 	getCpuid(&eax, &ebx, &ecx, &edx);
 	printk("Serial Number 0x%08x%08x\n", edx, ecx);
 }
+
+/*
+ * processor is in 32 bit mode here
+ */
+void writeCr0(unsigned long val) {
+         asm volatile(
+			"mov %0, %%cr0"
+		: 
+		:"r" (val)
+		);
+}
+
+/*
+ * READ MSRs
+ */
+void getMSR(u32 msr, u32 *low, u32 *hi) {
+	asm volatile("rdmsr" : "=a"(*low), "=d"(*hi) : "c"(msr));
+	printk("hi=%x lo=%x\n", *hi, *low);
+}
   
 void getCrRegs(void) {
 #ifdef __x86_64__
