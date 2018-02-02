@@ -1,5 +1,10 @@
 #include "wiser.h"
 
+/*
+ * home computer: Model 7, Extended Model 1
+ * Intel Core 2 Extreme processor, Intel Xeon, model 17h
+ */
+
 void getCpuid (unsigned int *eax, unsigned int *ebx,
 		 unsigned int *ecx, unsigned int *edx) {
 	// ecx is input and output
