@@ -1,18 +1,15 @@
-make -C /lib/modules/3.10.0-693.11.1.el7.x86_64/build M=/home/asethi/kvm/vmx modules
-make[1]: Entering directory `/usr/src/kernels/3.10.0-693.11.1.el7.x86_64'
-  Building modules, stage 2.
-  MODPOST 1 modules
-make[1]: Leaving directory `/usr/src/kernels/3.10.0-693.11.1.el7.x86_64'
-sudo insmod ./wiser.ko
-sudo rmmod wiser
-dmesg | tail
-[1104053.281295] Model 7
-[1104053.281296] Family 0
-[1104053.281297] Processor Type 0
-[1104053.281298] Extended Model 1
-[1104053.281299] Extended Family 0
-[1104053.281300] Serial Number 0x0000000000000000
-[1104053.281301] x86_64 mode
-[1104053.281302] cr0 = 0xffffffff80050033
-[1104053.281303] cr2 = 0xffffffff0c79084f
-[1104053.281304] cr3 = 0xffff8800000407f0
+Feb  2 09:24:31 localhost kernel: #012 Module wiser world unloaded
+Feb  2 09:24:31 localhost kernel: #012 Module wiser world loaded
+Feb  2 09:24:31 localhost kernel: Stepping 10
+Feb  2 09:24:31 localhost kernel: Model 7
+Feb  2 09:24:31 localhost kernel: Family 0
+Feb  2 09:24:31 localhost kernel: Processor Type 0
+Feb  2 09:24:31 localhost kernel: Extended Model 1
+Feb  2 09:24:31 localhost kernel: Extended Family 0
+Feb  2 09:24:31 localhost kernel: Serial Number 0x0000000000000000
+Feb  2 09:24:31 localhost kernel: x86_64 mode
+Feb  2 09:24:31 localhost kernel: cr0 = 0xffffffff8005003b
+Feb  2 09:24:31 localhost kernel: cr2 = 0xffffffffc3e06a78
+Feb  2 09:24:31 localhost kernel: cr3 = 0xffff8800000407e0
+Feb  2 09:24:31 localhost kernel: hi=5a0800 lo=d
+
