@@ -1,6 +1,6 @@
 # Makefile
 obj-m += wiser.o
-wiser-objs := main.o util.o
+wiser-objs := main.o wiser_main.o util.o
 
 all:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules

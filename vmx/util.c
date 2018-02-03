@@ -29,8 +29,8 @@ void getCpuid (unsigned int *eax, unsigned int *ebx,
  */
 void getProcCpuid(void) {
 	unsigned eax, ebx, ecx, edx;
-	ecx = 0x0;
 
+	ecx = 0x0;
 	eax = 1; // proc info
 	getCpuid(&eax, &ebx, &ecx, &edx);
 	printk("Stepping %d\n", eax & 0xF);
@@ -43,6 +43,22 @@ void getProcCpuid(void) {
 	eax = 3; // serial number
 	getCpuid(&eax, &ebx, &ecx, &edx);
 	printk("Serial Number 0x%08x%08x\n", edx, ecx);
+}
+
+/*
+ * en.wikipedia.org/wiki/CPUID
+ */
+int vmxCheckSupport(int cmd) {
+	unsigned eax, ebx, ecx, edx;
+
+	ecx = 0x0;
+	eax = cmd; // proc info
+	getCpuid(&eax, &ebx, &ecx, &edx);
+	if (CHKBIT(ecx, 5) == 1)
+		return 1;
+	else
+		return 0;
+
 }
 
 /*
@@ -79,7 +95,7 @@ void getMSR(u32 msr, u32 *low, u32 *hi) {
 	asm volatile("rdmsr" : "=a"(*low), "=d"(*hi) : "c"(msr));
 	printk("msr=0x%x, hi=%x lo=%x\n", msr, *hi, *low);
 	vmcs_num_bytes  =  *hi & 0xfff; // Bits 44:32
-	printk("vmcs_num_bytes = 0x%x", vmcs_num_bytes);
+	printk("vmcs_num_bytes = 0x%x\n", vmcs_num_bytes);
 }
   
 void getCrRegs(void) {

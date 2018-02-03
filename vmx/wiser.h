@@ -7,3 +7,8 @@ void getProcCpuid(void);
 void getCrRegs(void);
 void writeCr0(unsigned long val);
 void getMSR(u32 msr, u32 *low, u32 *hi);
+int wiser_main(void);
+int vmxCheckSupport(int cmd);
+
+#define CHKBIT(val, x) ((val>>x) & 0x1)
+
