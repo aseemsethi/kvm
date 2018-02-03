@@ -90,12 +90,20 @@ void writeCr0(unsigned long val) {
  *  56:63 reserved, must be zero
  */
 void getMSR(u32 msr, u32 *low, u32 *hi) {
-	uint32_t vmcs_num_bytes;
-
 	asm volatile("rdmsr" : "=a"(*low), "=d"(*hi) : "c"(msr));
 	printk("msr=0x%x, hi=%x lo=%x\n", msr, *hi, *low);
-	vmcs_num_bytes  =  *hi & 0xfff; // Bits 44:32
-	printk("vmcs_num_bytes = 0x%x\n", vmcs_num_bytes);
+}
+
+int vmxCheckSupportEPT() {
+	u32 low, hi;
+	getMSR(IA32_VMX_PROCBASED_CTLS, &low, &hi);
+	printk("MSR IA32_VMX_PROCBASED_CTLS: hi: %x, low: %x\n", hi, low);
+	if (CHKBIT(hi, 31) == 1) { // 63rd bit should be 1
+		getMSR(IA32_VMX_PROCBASED_CTLS2, &low, &hi);
+		if (CHKBIT(hi, 2) == 1) // 33rd bit should be 1
+			return 1;
+	}
+	return 0;
 }
   
 void getCrRegs(void) {
