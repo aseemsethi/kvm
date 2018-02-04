@@ -91,7 +91,7 @@ void writeCr0(unsigned long val) {
  */
 void getMSR(u32 msr, u32 *low, u32 *hi) {
 	asm volatile("rdmsr" : "=a"(*low), "=d"(*hi) : "c"(msr));
-	printk("msr=0x%x, hi=%x lo=%x\n", msr, *hi, *low);
+	printk("getMSR: msr=0x%x, hi=%x lo=%x\n", msr, *hi, *low);
 }
 
 int vmxCheckSupportEPT() {
