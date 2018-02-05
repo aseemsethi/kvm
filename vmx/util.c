@@ -105,7 +105,7 @@ int vmxCheckSupportEPT() {
 	}
 	return 0;
 }
-  
+
 void getCrRegs(void) {
 #ifdef __x86_64__
 	u64 cr0, cr2, cr3;

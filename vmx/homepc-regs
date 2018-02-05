@@ -12,4 +12,29 @@ Feb  2 09:24:31 localhost kernel: cr0 = 0xffffffff8005003b
 Feb  2 09:24:31 localhost kernel: cr2 = 0xffffffffc3e06a78
 Feb  2 09:24:31 localhost kernel: cr3 = 0xffff8800000407e0
 Feb  2 09:24:31 localhost kernel: hi=5a0800 lo=d
+------------------
+Feb  5 11:20:31 localhost kernel: #012 Module wiser world unloaded
+Feb  5 11:20:31 localhost kernel: #012 Module wiser world loaded
+Feb  5 11:20:31 localhost kernel: Stepping 10
+Feb  5 11:20:31 localhost kernel: Model 7
+Feb  5 11:20:31 localhost kernel: Family 0
+Feb  5 11:20:31 localhost kernel: Processor Type 0
+Feb  5 11:20:31 localhost kernel: Extended Model 1
+Feb  5 11:20:31 localhost kernel: Extended Family 0
+Feb  5 11:20:31 localhost kernel: Serial Number 0x0000000000000000
+Feb  5 11:20:31 localhost kernel: x86_64 mode
+Feb  5 11:20:31 localhost kernel: cr0 = 0xffffffff8005003b
+Feb  5 11:20:31 localhost kernel: cr2 = 0xffffffff3d6601b0
+Feb  5 11:20:31 localhost kernel: cr3 = 0xffff8800000407e0
+Feb  5 11:20:31 localhost kernel: getMSR: msr=0x480, hi=5a0800 lo=d
+Feb  5 11:20:31 localhost kernel: vmcs_num_bytes = 0x800
+Feb  5 11:20:31 localhost kernel: Prosessor is GenuineIntel
+Feb  5 11:20:31 localhost kernel: VMX supported by chipset
+Feb  5 11:20:31 localhost kernel: getMSR: msr=0x482, hi=f7f9fffe lo=401e172
+Feb  5 11:20:31 localhost kernel: MSR IA32_VMX_PROCBASED_CTLS: hi: f7f9fffe, low: 401e172
+Feb  5 11:20:31 localhost kernel: getMSR: msr=0x48b, hi=41 lo=0
+Feb  5 11:20:31 localhost kernel: EPT not supported by chipset
+Feb  5 11:20:31 localhost kernel: cr0 = 0x8005003b
+Feb  5 11:20:31 localhost kernel: cr4 = 0x407e0
+Feb  5 11:20:31 localhost kernel: Ensure that /dev/wiser has been created
 

@@ -39,7 +39,6 @@ int cpu_features;
 void *kmem[N_ARENAS];
 
 unsigned long msr0x480[11];
-unsigned long cr0, cr4;
 unsigned long msr_efer;
 unsigned long vmxon_region;
 unsigned long guest_region;
@@ -51,6 +50,7 @@ unsigned long g_LDT_region;
 unsigned long g_TSS_region;
 unsigned long g_TOS_region;
 unsigned long h_MSR_region;
+unsigned long cr0, cr4;
 
 DEFINE_MUTEX(my_mutex);
 
@@ -58,6 +58,7 @@ typedef struct vm_t {
 	uint32_t vmcs_num_bytes;
 	int	vmxSupport;
 	int	eptSupport;
+	unsigned long cr0, cr4;
 
 } vmStruct;
 vmStruct vm;
@@ -76,8 +77,8 @@ struct miscdevice wiser_dev = {
 	&wiser_dev_ops,
 };
 
-int wiser_main() {
-	u32 low, hi, r;
+int checkProcessor() {
+	u32 low, hi;
 
 	getProcCpuid();
 	getCrRegs();
@@ -85,6 +86,14 @@ int wiser_main() {
 	vm.vmcs_num_bytes  =  hi & 0xfff; // Bits 44:32
 	printk("vmcs_num_bytes = 0x%x\n", vm.vmcs_num_bytes);
 
+	//verify processor supports Intel Virt Tech
+	asm("xor %%eax, %%eax		\n"\
+	    "cpuid			\n"\
+	    "mov %%ebx, cpu_oem+0	\n"\
+	    "mov %%edx, cpu_oem+4	\n"\
+	    "mov %%ecx, cpu_oem+8	\n"\
+	    :::"ax", "bx","cx","dx");
+	printk("Prosessor is %s\n", cpu_oem);
 	// check if proc has VMX support
 	vm.vmxSupport = vmxCheckSupport(1);
 	if (vm.vmxSupport ==1)
@@ -99,6 +108,22 @@ int wiser_main() {
 	else
 		printk("EPT not supported by chipset\n");
 
+	// Save cr0, cr4 in our VM struct
+	asm( " mov %%cr0, %%rax \n mov %%rax, cr0 " ::: "ax" );
+	asm( " mov %%cr4, %%rax \n mov %%rax, cr4 " ::: "ax" );
+	vm.cr0 = cr0;
+	vm.cr4 = cr4;	
+	printk("cr0 = 0x%lx\n", vm.cr0);
+	printk("cr4 = 0x%lx\n", vm.cr4);
+
+	return 0;
+}
+
+int wiser_main() {
+	u32 r;
+
+	checkProcessor();
+
 	// Create /dev/wiser
 	// crw------- 1 root root 10, 57 Feb  4 10:51 /dev/wiser
 	wiser_dev_ops.owner = THIS_MODULE;
@@ -109,17 +134,10 @@ int wiser_main() {
 	}
 	// Check if /dev/[modname] has been created
 	printk("Ensure that /dev/wiser has been created\n");
-
-	//verify processor supports Intel Virt Tech
-	asm("xor %%eax, %%eax		\n"\
-	    "cpuid			\n"\
-	    "mov %%ebx, cpu_oem+0	\n"\
-	    "mov %%edx, cpu_oem+4	\n"\
-	    "mov %%ecx, cpu_oem+8	\n"\
-	    :::"ax", "bx","cx","dx");
-	printk("Prodessor is %s\n", cpu_oem);
+	return 0;
 }
 
-wiser_exit() {
+int wiser_exit() {
 	misc_deregister(&wiser_dev);
+	return 1;
 }
