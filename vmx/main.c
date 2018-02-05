@@ -16,6 +16,7 @@ int wiser_init(void) {
 
 void wiser_cleanup(void) {
 	printk("\n Module wiser %s unloaded", name);
+	wiser_exit();
 }
 
 module_init(wiser_init);

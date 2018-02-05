@@ -72,7 +72,7 @@ struct file_operations wiser_dev_ops = {
 };
 struct miscdevice wiser_dev = {
 	MISC_DYNAMIC_MINOR,
-	"wiser",
+	"wiser1",
 	&wiser_dev_ops,
 };
 
@@ -109,4 +109,17 @@ int wiser_main() {
 	}
 	// Check if /dev/[modname] has been created
 	printk("Ensure that /dev/wiser has been created\n");
+
+	//verify processor supports Intel Virt Tech
+	asm("xor %%eax, %%eax		\n"\
+	    "cpuid			\n"\
+	    "mov %%ebx, cpu_oem+0	\n"\
+	    "mov %%edx, cpu_oem+4	\n"\
+	    "mov %%ecx, cpu_oem+8	\n"\
+	    :::"ax", "bx","cx","dx");
+	printk("Prodessor is %s\n", cpu_oem);
+}
+
+wiser_exit() {
+	misc_deregister(&wiser_dev);
 }

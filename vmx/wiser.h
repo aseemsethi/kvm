@@ -8,6 +8,7 @@ void getCrRegs(void);
 void writeCr0(unsigned long val);
 void getMSR(u32 msr, u32 *low, u32 *hi);
 int wiser_main(void);
+int wiser_exit(void);
 int vmxCheckSupport(int cmd);
 int vmxCheckSupportEPT(void);
 
