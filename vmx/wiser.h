@@ -12,6 +12,8 @@ int wiser_exit(void);
 int checkProcessor(void);
 int vmxCheckSupport(int cmd);
 int vmxCheckSupportEPT(void);
+void setCr4Vmxe(void*);
+void clearCr4Vmxe(void*);
 
 #define CHKBIT(val, x) ((val>>x) & 0x1)
 

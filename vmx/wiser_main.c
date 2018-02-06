@@ -18,11 +18,13 @@
 
 #define PAGE_DIR_OFFSET	0x2000
 #define PAGE_TBL_OFFSET	0x3000
-#define IDT_KERN_OFFSET	0x4000
-#define GDT_KERN_OFFSET	0x4800
-#define LDT_KERN_OFFSET	0x4A00
-#define TSS_KERN_OFFSET	0x4C00
-#define TOS_KERN_OFFSET	0x8000
+
+#define IDT_KERN_OFFSET	0x4000 // 16384
+#define GDT_KERN_OFFSET	0x4800 // 18432 - (2k diff)
+#define LDT_KERN_OFFSET	0x4A00 // 18944 - (512 bytes diff
+
+#define TSS_KERN_OFFSET	0x4C00 // 19546 - (512 bytes diff)
+#define TOS_KERN_OFFSET	0x8000 // 32768
 #define MSR_KERN_OFFSET	0x8000
 
 #define __SELECTOR_TASK	0x0008
@@ -49,7 +51,7 @@ unsigned long g_GDT_region;
 unsigned long g_LDT_region;
 unsigned long g_TSS_region;
 unsigned long g_TOS_region;
-unsigned long h_MSR_region;
+unsigned long g_MSR_region;
 unsigned long cr0, cr4;
 
 DEFINE_MUTEX(my_mutex);
@@ -77,7 +79,7 @@ struct file_operations wiser_dev_ops = {
 };
 struct miscdevice wiser_dev = {
 	MISC_DYNAMIC_MINOR,
-	"wiser1",
+	"wiser",
 	&wiser_dev_ops,
 };
 
@@ -120,7 +122,7 @@ int checkProcessor() {
 	printk("cr0 = 0x%016lx\n", vm.cr0);
 	printk("cr4 = 0x%016lx\n", vm.cr4);
 
-	// Get ESFER MSR
+	// Get EFER MSR
 	asm( "mov %0, %%ecx		\n"\
 		 "rdmsr				\n"\
 		 "mov %%eax, msr_efer+0 \n"\
@@ -131,8 +133,24 @@ int checkProcessor() {
 	return 0;
 }
 
+void assignAddresses() {
+	vmxon_region = virt_to_phys(kmem[10] + 0x000);
+	guest_region = virt_to_phys(kmem[10] + 0x1000);
+
+	pgdir_region = virt_to_phys(kmem[10] + PAGE_DIR_OFFSET);
+	pgtbl_region = virt_to_phys(kmem[10] + PAGE_TBL_OFFSET);
+
+	g_IDT_region = virt_to_phys(kmem[10] + IDT_KERN_OFFSET);
+	g_GDT_region = virt_to_phys(kmem[10] + GDT_KERN_OFFSET);
+	g_LDT_region = virt_to_phys(kmem[10] + LDT_KERN_OFFSET);
+
+	g_TSS_region = virt_to_phys(kmem[10] + TSS_KERN_OFFSET);
+	g_TOS_region = virt_to_phys(kmem[10] + TOS_KERN_OFFSET);
+	g_MSR_region = virt_to_phys(kmem[10] + MSR_KERN_OFFSET);
+}
+
 int wiser_main() {
-	u32 r;
+	u32 i, j, r;
 
 	checkProcessor();
 
@@ -146,6 +164,24 @@ int wiser_main() {
 	}
 	// Check if /dev/[modname] has been created
 	printk("Ensure that /dev/wiser has been created\n");
+
+	// allocate page-aligned blocks of non-pageable kernel mem
+	for (i=0;i<N_ARENAS; i++) {
+		kmem[i] = kmalloc(ARENA_LENGTH, GFP_KERNEL);
+		if (kmem[i] == NULL) {
+			for(j=0;j<i;j++) kfree(kmem[j]);
+			return -ENOMEM;
+		} else 
+			memset(kmem[i], 0x00, ARENA_LENGTH);
+	}
+
+	// Assign usages to mem areas
+	assignAddresses();
+
+	// enable VM extensions (bit 13 in CR4)
+	setCr4Vmxe(NULL);
+	smp_call_function(setCr4Vmxe, NULL, 1);
+
 	return 0;
 }
 

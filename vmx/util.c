@@ -44,6 +44,19 @@ void getProcCpuid(void) {
 	getCpuid(&eax, &ebx, &ecx, &edx);
 	printk("Serial Number 0x%08x%08x\n", edx, ecx);
 }
+void setCr4Vmxe(void *dummy) {
+	asm( "mov %%cr4, %%rax	\n"\
+		 "bts $13, %%rax	\n"\
+		 "mov %%rax, %%cr4	\n"\
+		:::"ax");
+}
+
+void clearCr4Vmxe(void *dummy) {
+	asm( "mov %%cr4, %%rax	\n"\
+		 "btr $13, %%rax	\n"\
+		 "mov %%rax, %%cr4	\n"\
+		:::"ax");
+}
 
 /*
  * en.wikipedia.org/wiki/CPUID
