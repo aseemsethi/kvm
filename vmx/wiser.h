@@ -52,3 +52,4 @@ int vmxCheckSupportEPT(void);
 // Enable VM functions (bit 13)
 #define IA32_VMX_PROCBASED_CTLS2 0x48B
 
+// #define MSR_EFER		0xc0000080 /* extended feature register */

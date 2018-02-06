@@ -63,8 +63,12 @@ typedef struct vm_t {
 } vmStruct;
 vmStruct vm;
 
-long wiser_dev_ioctl(struct file *file, unsigned int ioctl, unsigned long arg) {}
-int wiser_dev_mmap(struct file *file, struct vm_area_struct *vma ){}
+long wiser_dev_ioctl(struct file *file, unsigned int ioctl, unsigned long arg) {
+return 1;
+}
+int wiser_dev_mmap(struct file *file, struct vm_area_struct *vma ){
+return 1;
+}
 
 struct file_operations wiser_dev_ops = {
 	.unlocked_ioctl = wiser_dev_ioctl,
@@ -108,13 +112,21 @@ int checkProcessor() {
 	else
 		printk("EPT not supported by chipset\n");
 
-	// Save cr0, cr4 in our VM struct
+	// Save 32bit cr0, cr4 in our VM struct
 	asm( " mov %%cr0, %%rax \n mov %%rax, cr0 " ::: "ax" );
 	asm( " mov %%cr4, %%rax \n mov %%rax, cr4 " ::: "ax" );
 	vm.cr0 = cr0;
 	vm.cr4 = cr4;	
-	printk("cr0 = 0x%lx\n", vm.cr0);
-	printk("cr4 = 0x%lx\n", vm.cr4);
+	printk("cr0 = 0x%016lx\n", vm.cr0);
+	printk("cr4 = 0x%016lx\n", vm.cr4);
+
+	// Get ESFER MSR
+	asm( "mov %0, %%ecx		\n"\
+		 "rdmsr				\n"\
+		 "mov %%eax, msr_efer+0 \n"\
+		 "mov %%edx, msr_efer+4 \n"\
+		::"i" (MSR_EFER): "ax", "cx", "dx");
+	printk("EFER MSR = 0x%016lX\n", msr_efer);
 
 	return 0;
 }
