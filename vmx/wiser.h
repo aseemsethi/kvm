@@ -14,6 +14,7 @@ int vmxCheckSupport(int cmd);
 int vmxCheckSupportEPT(void);
 void setCr4Vmxe(void*);
 void clearCr4Vmxe(void*);
+void assignAddresses(void);
 
 #define CHKBIT(val, x) ((val>>x) & 0x1)
 

@@ -1,6 +1,7 @@
 #include "wiser.h"
 #include <linux/mm.h>
 #include <linux/proc_fs.h>	// for create proc entry
+#include <linux/seq_file.h>
 #include <linux/fs.h>		// struct file ops
 #include <linux/mm.h>		// for remap_pfn_range
 #include <linux/mutex.h>	// for mutexs
@@ -9,6 +10,8 @@
 #include <linux/miscdevice.h>		// for copy_from_user()
 //#include "machine.h"		// for VMCS fields
 #include <linux/slab.h>		// for kmalloc()
+#include <linux/delay.h>
+
 
 #define N_ARENAS 11 		// number of 64 KB mem allocations
 #define ARENA_LENGTH (64<<10)	// 65536 - size of each allocated mem area
@@ -149,6 +152,34 @@ void assignAddresses() {
 	g_MSR_region = virt_to_phys(kmem[10] + MSR_KERN_OFFSET);
 }
 
+xxwiserInfo(char *buf, char **start, off_t off, int count, int *eof, void *data ) {
+
+	int i, len;
+	len = 0;
+	
+	len += sprintf(buf+len, "\n\t%s\n\n", "VMX Capability MSRs");
+	return len;
+}
+
+struct proc_dir_entry *proc_file_entry;
+
+static int hello_proc_show(struct seq_file *m, void *v) {
+  seq_printf(m, "Hello proc!\n");
+  return 0;
+}
+
+static int hello_proc_open(struct inode *inode, struct  file *file) {
+  return single_open(file, hello_proc_show, NULL);
+}
+
+static const struct file_operations wiserInfo = {
+  .owner = THIS_MODULE,
+  .open = hello_proc_open,
+  .read = seq_read,
+  .llseek = seq_lseek,
+  .release = single_release,
+};
+
 int wiser_main() {
 	u32 i, j, r;
 
@@ -179,13 +210,19 @@ int wiser_main() {
 	assignAddresses();
 
 	// enable VM extensions (bit 13 in CR4)
-	setCr4Vmxe(NULL);
-	smp_call_function(setCr4Vmxe, NULL, 1);
+	//setCr4Vmxe(NULL);
+	//smp_call_function(setCr4Vmxe, NULL, 1);
+	proc_file_entry = proc_create(modname, 0, NULL, &wiserInfo);
+	if(proc_file_entry == NULL) {
+		printk("Could not create proc entry\n");
+		return 0;
+	}
 
+	msleep(10000);
 	return 0;
 }
 
 int wiser_exit() {
 	misc_deregister(&wiser_dev);
-	return 1;
+	remove_proc_entry(modname, NULL);
 }
