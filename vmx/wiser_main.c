@@ -54,7 +54,7 @@ unsigned long g_GDT_region;
 unsigned long g_LDT_region;
 unsigned long g_TSS_region;
 unsigned long g_TOS_region;
-unsigned long g_MSR_region;
+unsigned long h_MSR_region;
 
 unsigned long cr0, cr4;
 u32 regsitered=-1;
@@ -66,7 +66,7 @@ typedef struct vm_t {
 	int	vmxSupport;
 	int	eptSupport;
 	unsigned long cr0, cr4;
-
+	unsigned long msr_efer;
 } vmStruct;
 vmStruct vm;
 
@@ -160,6 +160,7 @@ int checkProcessor() {
 		 "mov %%edx, msr_efer+4 \n"\
 		::"i" (MSR_EFER): "ax", "cx", "dx");
 	printk("EFER MSR = 0x%016lX\n", msr_efer);
+	vm.msr_efer = msr_efer;
 
 	return 0;
 }
@@ -177,25 +178,47 @@ void assignAddresses() {
 
 	g_TSS_region = virt_to_phys(kmem[10] + TSS_KERN_OFFSET);
 	g_TOS_region = virt_to_phys(kmem[10] + TOS_KERN_OFFSET);
-	g_MSR_region = virt_to_phys(kmem[10] + MSR_KERN_OFFSET);
+	h_MSR_region = virt_to_phys(kmem[10] + MSR_KERN_OFFSET);
 }
 
 
 struct proc_dir_entry *proc_file_entry = NULL;
 
-static int hello_proc_show(struct seq_file *m, void *v) {
+static int wiser_show(struct seq_file *m, void *v) {
+	int i;
+
 	seq_printf(m, "Hello proc!\n");
 	seq_printf(m, "\n\t%s\n\n", "VMX Capability MSRs");
+    for (i = 0; i < 11; i++) {
+        seq_printf(m, "\tMSR0x%X=", 0x480 + i);
+        seq_printf(m, "%016lX \n", msr0x480[i]);
+	}
+    seq_printf(m, "CR0=%016lX  ", vm.cr0 );
+    seq_printf(m, "CR4=%016lX  ", vm.cr4 );
+    seq_printf(m, "EFER=%016lX \n ", vm.msr_efer );
+
+    seq_printf(m, "vmxon_region=%016lX \n", vmxon_region );
+    seq_printf(m, "\n" );
+    seq_printf(m, "guest_region=%016lX \n", guest_region );
+    seq_printf(m, "pgdir_region=%016lX \n", pgdir_region );
+    seq_printf(m, "pgtbl_region=%016lX \n", pgtbl_region );
+    seq_printf(m, "g_IDT_region=%016lX \n", g_IDT_region );
+    seq_printf(m, "g_GDT_region=%016lX \n", g_GDT_region );
+    seq_printf(m, "g_LDT_region=%016lX \n", g_LDT_region );
+    seq_printf(m, "g_TSS_region=%016lX \n", g_TSS_region );
+    seq_printf(m, "g_TOS_region=%016lX \n", g_TOS_region );
+    seq_printf(m, "h_MSR_region=%016lX \n", h_MSR_region );
+
 	return 0;
 }
 
-static int hello_proc_open(struct inode *inode, struct  file *file) {
-  return single_open(file, hello_proc_show, NULL);
+static int wiser_open(struct inode *inode, struct  file *file) {
+  return single_open(file, wiser_show, NULL);
 }
 
 static const struct file_operations wiserInfo = {
   .owner = THIS_MODULE,
-  .open = hello_proc_open,
+  .open = wiser_open,
   .read = seq_read,
   .llseek = seq_lseek,
   .release = single_release,
@@ -254,4 +277,5 @@ int wiser_exit() {
 	if(proc_file_entry != NULL)
 		remove_proc_entry(modname, NULL);
 	// for(j=0;j<i;j++) kfree(kmem[j]);
+	return 0;
 }
