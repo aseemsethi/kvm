@@ -82,6 +82,7 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
 */
 	int ret;
 	
+	printk("wiser_dev_ioctl...\n");
 	ret = mutex_trylock(&my_mutex);
 	if (ret == 0) {
 		return -ERESTARTSYS;
