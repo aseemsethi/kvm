@@ -70,11 +70,34 @@ typedef struct vm_t {
 } vmStruct;
 vmStruct vm;
 
-long wiser_dev_ioctl(struct file *file, unsigned int ioctl, unsigned long arg) {
-return 1;
+unsigned short _gdtr[5], _idtr[5];
+unsigned int _eax, _ebx, _ecx, _edx, _esp, _ebp, _esi, _edi;
+long wiser_dev_ioctl( struct file *file, unsigned int count, 
+					  unsigned long buf) {
+
+/*
+	unsigned long *gdt, *ldt, *idt;
+	unsigned int *pgtbl, *pgdir, *tss, phys_addr = 0;
+	int i,j;
+*/
+	int ret;
+	
+	ret = mutex_trylock(&my_mutex);
+	if (ret == 0) {
+		return -ERESTARTSYS;
+	}
+	// client needs to pass data equal to register-state amount
+	if(count != sizeof(regs_ia32)) {
+		mutex_unlock(&my_mutex);
+		return -EINVAL;
+	}
+	// reinitialize the VM Control Structures
+	
+
+	return 1;
 }
 int wiser_dev_mmap(struct file *file, struct vm_area_struct *vma ){
-return 1;
+	return 1;
 }
 
 struct file_operations wiser_dev_ops = {
@@ -156,20 +179,13 @@ void assignAddresses() {
 	g_MSR_region = virt_to_phys(kmem[10] + MSR_KERN_OFFSET);
 }
 
-xxwiserInfo(char *buf, char **start, off_t off, int count, int *eof, void *data ) {
-
-	int i, len;
-	len = 0;
-	
-	len += sprintf(buf+len, "\n\t%s\n\n", "VMX Capability MSRs");
-	return len;
-}
 
 struct proc_dir_entry *proc_file_entry = NULL;
 
 static int hello_proc_show(struct seq_file *m, void *v) {
-  seq_printf(m, "Hello proc!\n");
-  return 0;
+	seq_printf(m, "Hello proc!\n");
+	seq_printf(m, "\n\t%s\n\n", "VMX Capability MSRs");
+	return 0;
 }
 
 static int hello_proc_open(struct inode *inode, struct  file *file) {
@@ -190,7 +206,7 @@ int wiser_main() {
 	status = checkProcessor();
 	if (status == -1) {
 		printk("\n VMX not supported on processor !!!");
-		return -1;
+//		return -1;
 	}
 
 	// Create /dev/wiser
@@ -218,8 +234,8 @@ int wiser_main() {
 	assignAddresses();
 
 	// enable VM extensions (bit 13 in CR4)
-	setCr4Vmxe(NULL);
-	smp_call_function(setCr4Vmxe, NULL, 1);
+//	setCr4Vmxe(NULL);
+//	smp_call_function(setCr4Vmxe, NULL, 1);
 	proc_file_entry = proc_create(modname, 0, NULL, &wiserInfo);
 	if(proc_file_entry == NULL) {
 		printk("Could not create proc entry\n");
@@ -236,4 +252,5 @@ int wiser_exit() {
 		misc_deregister(&wiser_dev);
 	if(proc_file_entry != NULL)
 		remove_proc_entry(modname, NULL);
+	// for(j=0;j<i;j++) kfree(kmem[j]);
 }
