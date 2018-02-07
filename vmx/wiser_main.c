@@ -210,8 +210,8 @@ int wiser_main() {
 	assignAddresses();
 
 	// enable VM extensions (bit 13 in CR4)
-	//setCr4Vmxe(NULL);
-	//smp_call_function(setCr4Vmxe, NULL, 1);
+	setCr4Vmxe(NULL);
+	smp_call_function(setCr4Vmxe, NULL, 1);
 	proc_file_entry = proc_create(modname, 0, NULL, &wiserInfo);
 	if(proc_file_entry == NULL) {
 		printk("Could not create proc entry\n");
