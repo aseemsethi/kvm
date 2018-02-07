@@ -108,6 +108,10 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
 		return -EINVAL;
 	}
 	// reinitialize the VM Control Structures
+	memset(phys_to_virt(vmxon_region), 0x00, PAGE_SIZE);
+	memset(phys_to_virt(guest_region), 0x00, PAGE_SIZE);
+	memcpy(phys_to_virt(vmxon_region), msr0x480, 4);
+	memcpy(phys_to_virt(guest_region), msr0x480, 4);
 	
 
 	return 1;
@@ -159,6 +163,19 @@ int checkProcessor() {
 		printk("EPT supported by chipset\n");
 	else
 		printk("EPT not supported by chipset\n");
+
+	// read all MSRs into the msr0x480 array
+	asm(    " xor   %%rbx, %%rbx                    \n"\
+                " mov   %0, %%rcx                       \n"\
+                "nxcap:                                 \n"\
+                " rdmsr                                 \n"\
+                " mov   %%eax, msr0x480+0(, %%rbx, 8)   \n"\
+                " mov   %%edx, msr0x480+4(, %%rbx, 8)   \n"\
+                " inc   %%rcx                           \n"\
+                " inc   %%rbx                           \n"\
+                " cmp   $11, %%rbx                      \n"\
+                " jb    nxcap                           \n"\
+           :: "i" (MSR_VMX_CAPS) : "ax", "bx", "cx", "dx"  );
 
 	// Save 32bit cr0, cr4 in our VM struct
 	asm( " mov %%cr0, %%rax \n mov %%rax, cr0 " ::: "ax" );

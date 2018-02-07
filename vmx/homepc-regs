@@ -93,4 +93,59 @@ g_TSS_region=000000006C754C00
 g_TOS_region=000000006C758000 
 h_MSR_region=000000006C758000 
 [asethi@localhost linuxvmm]$ 
+------------------
+Feb  7 10:44:51 localhost kernel: Stepping 10
+Feb  7 10:44:51 localhost kernel: Model 7
+Feb  7 10:44:51 localhost kernel: Family 0
+Feb  7 10:44:51 localhost kernel: Processor Type 0
+Feb  7 10:44:51 localhost kernel: Extended Model 1
+Feb  7 10:44:51 localhost kernel: Extended Family 0
+Feb  7 10:44:51 localhost kernel: Serial Number 0x0000000000000000
+Feb  7 10:44:51 localhost kernel: x86_64 mode
+Feb  7 10:44:51 localhost kernel: cr0 = 0xffffffff8005003b
+Feb  7 10:44:51 localhost kernel: cr2 = 0xffffffff3c0ee048
+Feb  7 10:44:51 localhost kernel: cr3 = 0xffff8800000427e0
+Feb  7 10:44:51 localhost kernel: getMSR: msr=0x480, hi=5a0800 lo=d
+Feb  7 10:44:51 localhost kernel: vmcs_num_bytes = 0x800
+Feb  7 10:44:51 localhost kernel: Prosessor is GenuineIntel
+Feb  7 10:44:51 localhost kernel: VMX supported by chipset
+Feb  7 10:44:51 localhost kernel: getMSR: msr=0x482, hi=f7f9fffe lo=401e172
+Feb  7 10:44:51 localhost kernel: MSR IA32_VMX_PROCBASED_CTLS: hi: f7f9fffe, low: 401e172
+Feb  7 10:44:51 localhost kernel: getMSR: msr=0x48b, hi=41 lo=0
+Feb  7 10:44:51 localhost kernel: EPT not supported by chipset
+Feb  7 10:44:51 localhost kernel: cr0 = 0x000000008005003b
+Feb  7 10:44:51 localhost kernel: cr4 = 0x00000000000427e0
+Feb  7 10:44:51 localhost kernel: EFER MSR = 0x0000000000000D01
+Feb  7 10:44:51 localhost kernel: Ensure that /dev/wiser has been created
+Feb  7 10:45:00 localhost kernel: wiser_dev_ioctl...
+-----------
+[asethi@localhost linuxvmm]$ cat /proc/wiser
+Hello proc!
+
+        VMX Capability MSRs
+
+        MSR0x480=005A08000000000D 
+        MSR0x481=0000003F00000016 
+        MSR0x482=F7F9FFFE0401E172 
+        MSR0x483=0003FFFF00036DFF 
+        MSR0x484=00003FFF000011FF 
+        MSR0x485=00000000000403C0 
+        MSR0x486=0000000080000021 
+        MSR0x487=00000000FFFFFFFF 
+        MSR0x488=0000000000002000 
+        MSR0x489=00000000000427FF 
+        MSR0x48A=000000000000002C 
+CR0=000000008005003B  CR4=00000000000427E0  EFER=0000000000000D01 
+ vmxon_region=000000000F1A0000 
+
+guest_region=000000000F1A1000 
+pgdir_region=000000000F1A2000 
+pgtbl_region=000000000F1A3000 
+g_IDT_region=000000000F1A4000 
+g_GDT_region=000000000F1A4800 
+g_LDT_region=000000000F1A4A00 
+g_TSS_region=000000000F1A4C00 
+g_TOS_region=000000000F1A8000 
+h_MSR_region=000000000F1A8000 
+---------------------------------
 
