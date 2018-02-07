@@ -60,6 +60,8 @@ void clearCr4Vmxe(void *dummy) {
 
 /*
  * en.wikipedia.org/wiki/CPUID
+ * EAX=1: Processor Info and Feature Bits
+ * Check bit5 of ECX for VMX support
  */
 int vmxCheckSupport(int cmd) {
 	unsigned eax, ebx, ecx, edx;

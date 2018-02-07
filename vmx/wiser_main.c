@@ -55,7 +55,9 @@ unsigned long g_LDT_region;
 unsigned long g_TSS_region;
 unsigned long g_TOS_region;
 unsigned long g_MSR_region;
+
 unsigned long cr0, cr4;
+u32 regsitered=-1;
 
 DEFINE_MUTEX(my_mutex);
 
@@ -107,8 +109,10 @@ int checkProcessor() {
 	vm.vmxSupport = vmxCheckSupport(1);
 	if (vm.vmxSupport ==1)
 		printk("VMX supported by chipset\n");
-	else
+	else {
 		printk("VMX not supported by chipset\n");
+		return -1;
+	}
 	
 	// check if proc has EPT support
 	vm.eptSupport = vmxCheckSupportEPT();
@@ -161,7 +165,7 @@ xxwiserInfo(char *buf, char **start, off_t off, int count, int *eof, void *data 
 	return len;
 }
 
-struct proc_dir_entry *proc_file_entry;
+struct proc_dir_entry *proc_file_entry = NULL;
 
 static int hello_proc_show(struct seq_file *m, void *v) {
   seq_printf(m, "Hello proc!\n");
@@ -181,15 +185,19 @@ static const struct file_operations wiserInfo = {
 };
 
 int wiser_main() {
-	u32 i, j, r;
+	u32 i, j, status;
 
-	checkProcessor();
+	status = checkProcessor();
+	if (status == -1) {
+		printk("\n VMX not supported on processor !!!");
+		return -1;
+	}
 
 	// Create /dev/wiser
 	// crw------- 1 root root 10, 57 Feb  4 10:51 /dev/wiser
 	wiser_dev_ops.owner = THIS_MODULE;
-	r = misc_register(&wiser_dev);
-	if(r) {
+	regsitered = misc_register(&wiser_dev);
+	if(regsitered) {
 		printk(KERN_ERR "Wiser: misc dev register failed\n");
 		return -1;
 	}
@@ -223,6 +231,9 @@ int wiser_main() {
 }
 
 int wiser_exit() {
-	misc_deregister(&wiser_dev);
-	remove_proc_entry(modname, NULL);
+	// deregister only if previosuly registered
+	if (regsitered == 0)
+		misc_deregister(&wiser_dev);
+	if(proc_file_entry != NULL)
+		remove_proc_entry(modname, NULL);
 }
