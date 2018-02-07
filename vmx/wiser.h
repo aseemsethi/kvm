@@ -54,6 +54,17 @@ void assignAddresses(void);
 // Enable VPID (bit 5)
 // Enable VM functions (bit 13)
 #define IA32_VMX_PROCBASED_CTLS2 0x48B
+#define IA32_VMX_EXIT_CTLS 0x483
+#define IA32_VMX_ENTRY_CTLS 0x484
+#define IA32_VMX_MISC 0x485
+/*
+IA32_VMX_CR0_FIXED0 0x486
+IA32_VMX_CR0_FIXED1 0x487
+IA32_VMX_CR4_FIXED0 0x488
+IA32_VMX_CR4_FIXED1 0x489
+IA32_VMX_VMCS_ENUM 0x48A
+IA32_VMX_EPT_VPID_CAP 0x48C 
+*/
 
 typedef struct  {
         unsigned int    eip;
