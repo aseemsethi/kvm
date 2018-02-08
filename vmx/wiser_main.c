@@ -84,34 +84,11 @@ typedef struct vm_t {
 	unsigned long msr_efer;
 } vmStruct;
 vmStruct vm;
+regs_ia32 guestRegs;
 
-unsigned short _gdtr[5], _idtr[5];
-unsigned int _eax, _ebx, _ecx, _edx, _esp, _ebp, _esi, _edi;
-long wiser_dev_ioctl( struct file *file, unsigned int count, 
-					  unsigned long buf) {
-
-/*
-	unsigned long *gdt, *ldt, *idt;
-*/
-	unsigned int *pgtbl, *pgdir, *tss, phys_addr = 0;
+void setupPageTables() {
+	unsigned int *pgtbl, *pgdir, phys_addr = 0;
 	int i,j;
-	int ret;
-	
-	printk("wiser_dev_ioctl...\n");
-	ret = mutex_trylock(&my_mutex);
-	if (ret == 0) {
-		return -ERESTARTSYS;
-	}
-	// client needs to pass data equal to register-state amount
-	if(count != sizeof(regs_ia32)) {
-		mutex_unlock(&my_mutex);
-		return -EINVAL;
-	}
-	// reinitialize the VM Control Structures
-	memset(phys_to_virt(vmxon_region), 0x00, PAGE_SIZE);
-	memset(phys_to_virt(guest_region), 0x00, PAGE_SIZE);
-	memcpy(phys_to_virt(vmxon_region), msr0x480, 4);
-	memcpy(phys_to_virt(guest_region), msr0x480, 4);
 
 	// Set the page tables up as follows
 	// for index [0] - [9], pick up phys address as kmem[i]
@@ -146,7 +123,41 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
 	}
     pgdir = (unsigned int*)phys_to_virt( pgdir_region );
     pgdir[0] = (unsigned int)pgtbl_region + 7;
+}
 
+unsigned short _gdtr[5], _idtr[5];
+unsigned int _eax, _ebx, _ecx, _edx, _esp, _ebp, _esi, _edi;
+long wiser_dev_ioctl( struct file *file, unsigned int count, 
+					  unsigned long buf) {
+
+/*
+	unsigned long *gdt, *ldt, *idt;
+	unsigned int *tss;
+*/
+	int ret;
+	
+	printk("wiser_dev_ioctl...\n");
+	ret = mutex_trylock(&my_mutex);
+	if (ret == 0) {
+		return -ERESTARTSYS;
+	}
+	// client needs to pass data equal to register-state amount
+	if(count != sizeof(regs_ia32)) {
+		mutex_unlock(&my_mutex);
+		return -EINVAL;
+	}
+	// reinitialize the VM Control Structures
+	memset(phys_to_virt(vmxon_region), 0x00, PAGE_SIZE);
+	memset(phys_to_virt(guest_region), 0x00, PAGE_SIZE);
+	memcpy(phys_to_virt(vmxon_region), msr0x480, 4);
+	memcpy(phys_to_virt(guest_region), msr0x480, 4);
+
+	setupPageTables();
+	// copy client's VM register values
+	if (copy_from_user(&guestRegs, (void*)buf, count)) {
+		mutex_unlock(&my_mutex);
+		return -EFAULT;
+	}
 	return 1;
 }
 int wiser_dev_mmap(struct file *file, struct vm_area_struct *vma ){
