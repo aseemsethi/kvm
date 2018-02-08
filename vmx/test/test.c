@@ -33,6 +33,13 @@ int main( int argc, char **argv )
 	int fd = open( devname, O_RDWR );
 	if ( fd < 0 ) { perror( devname ); exit(1); }
 
+	// mmap the legacy 8086 memory area
+	int size = 0x110000;
+	if (mmap((void*)0, size, PROT_READ|PROT_WRITE, 
+			MAP_FIXED|MAP_SHARED, fd, 0) == MAP_FAILED) {
+		perror("mmap"); exit(1);
+	}
+
     // invoke the virtual-machine
 	int retval = ioctl( fd, sizeof( vm ), &vm );
 }

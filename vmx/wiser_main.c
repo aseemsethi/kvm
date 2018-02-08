@@ -161,6 +161,16 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
 	return 1;
 }
 int wiser_dev_mmap(struct file *file, struct vm_area_struct *vma ){
+	unsigned long user_virtaddr = vma->vm_start;
+	unsigned long region_length  = vma->vm_end - vma->vm_start;
+	unsigned long physical_addr, pfn;
+	int i;
+
+	printk("\n wiser_dev_mmap called\n");
+	if (user_virtaddr != 0x00000000L) return -EINVAL;
+	if (region_length != LEGACY_REACH) return -EINVAL;
+	printk("wiser_dev_mmap: user start virtual is 0x0 and length is 1M\n");
+
 	return 1;
 }
 
