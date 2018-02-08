@@ -105,6 +105,7 @@ void setupPageTables() {
 	// first member to physical address of pgtbl_region above
 	// Note that "7" is added to all entries to set the Present/Rd&Wr/User bit
 	// for all entries
+    printk("Setting up page tables\n");
     pgtbl = (unsigned int*)phys_to_virt( pgtbl_region );
     for (i = 0; i < 18; i++) {
         switch (i) {
@@ -118,6 +119,7 @@ void setupPageTables() {
             case 17:
             phys_addr = virt_to_phys( kmem[ 10 ] ); break;
         }
+	printk("phys addr[%d] = 0x%016lx\n", i, phys_addr);
         for (j = 0; j < 16; j++)
             pgtbl[ i*16 + j ] = phys_addr + (j << PAGE_SHIFT) + 7;
 	}
@@ -163,7 +165,7 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
 int wiser_dev_mmap(struct file *file, struct vm_area_struct *vma ){
 	unsigned long user_virtaddr = vma->vm_start;
 	unsigned long region_length  = vma->vm_end - vma->vm_start;
-	unsigned long physical_addr, pfn;
+	//unsigned long physical_addr, pfn;
 	int i;
 
 	printk("\n wiser_dev_mmap called\n");
@@ -301,7 +303,7 @@ static int wiser_show(struct seq_file *m, void *v) {
     pgdir = (unsigned int*)phys_to_virt(pgdir_region);
     seq_printf(m, "PGDIR=%016X \n", pgdir[0] );
     for (i = 0; i <= 287; i++)
-    	seq_printf(m, "PGTBL[%d]=%016X \n", i, pgtbl[0] );
+    	seq_printf(m, "PGTBL[%d]=%016X \n", i, pgtbl[i] );
 
 	return 0;
 }
