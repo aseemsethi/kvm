@@ -92,9 +92,9 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
 
 /*
 	unsigned long *gdt, *ldt, *idt;
+*/
 	unsigned int *pgtbl, *pgdir, *tss, phys_addr = 0;
 	int i,j;
-*/
 	int ret;
 	
 	printk("wiser_dev_ioctl...\n");
@@ -112,7 +112,40 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
 	memset(phys_to_virt(guest_region), 0x00, PAGE_SIZE);
 	memcpy(phys_to_virt(vmxon_region), msr0x480, 4);
 	memcpy(phys_to_virt(guest_region), msr0x480, 4);
-	
+
+	// Set the page tables up as follows
+	// for index [0] - [9], pick up phys address as kmem[i]
+	// Now, since each kmem[i] is 64 Kbyte, it can have 16 Pages
+	// So, 16 * (i=10) = 160 PTEs map out the complete 64K of kmem
+	// memory, we have allcoated.
+	// Now, pick up 6 more, and add PTEs for the next [10] to [15]
+	// i.e. 6 * 16 PTEs = 96 PTE entries
+	// Finally, set 16 PTEs from 16*16 (256 to 271) to kmem[0], and 
+	// 17*16(272) to 287 to kmem[10]
+	// So, a total of 287 PTEs
+	// These are Interrupt Vector Table and Extended BIOS areas
+	// Now, set pgdir to physical address of pgdir_region and set its
+	// first member to physical address of pgtbl_region above
+	// Note that "7" is added to all entries to set the Present/Rd&Wr/User bit
+	// for all entries
+    pgtbl = (unsigned int*)phys_to_virt( pgtbl_region );
+    for (i = 0; i < 18; i++) {
+        switch (i) {
+            case 0: case 1: case 2: case 3: case 4:
+            case 5: case 6: case 7: case 8: case 9:
+            phys_addr = virt_to_phys( kmem[ i ] ); break;
+            case 10: case 11: case 12: case 13: case 14: case 15:
+            phys_addr = i * ARENA_LENGTH; break;
+            case 16:
+            phys_addr = virt_to_phys( kmem[ 0 ] ); break;
+            case 17:
+            phys_addr = virt_to_phys( kmem[ 10 ] ); break;
+        }
+        for (j = 0; j < 16; j++)
+            pgtbl[ i*16 + j ] = phys_addr + (j << PAGE_SHIFT) + 7;
+	}
+    pgdir = (unsigned int*)phys_to_virt( pgdir_region );
+    pgdir[0] = (unsigned int)pgtbl_region + 7;
 
 	return 1;
 }
@@ -218,6 +251,7 @@ struct proc_dir_entry *proc_file_entry = NULL;
 
 static int wiser_show(struct seq_file *m, void *v) {
 	int i;
+	unsigned int *pgtbl, *pgdir;
 
 	seq_printf(m, "Hello proc!\n");
 	seq_printf(m, "\n\t%s\n\n", "VMX Capability MSRs");
@@ -240,6 +274,13 @@ static int wiser_show(struct seq_file *m, void *v) {
     seq_printf(m, "g_TSS_region=%016lX \n", g_TSS_region );
     seq_printf(m, "g_TOS_region=%016lX \n", g_TOS_region );
     seq_printf(m, "h_MSR_region=%016lX \n", h_MSR_region );
+
+    seq_printf(m, "\nPage Tables setup\n");
+    pgtbl = (unsigned int*)phys_to_virt(pgtbl_region);
+    pgdir = (unsigned int*)phys_to_virt(pgdir_region);
+    seq_printf(m, "PGDIR=%016X \n", pgdir[0] );
+    for (i = 0; i <= 287; i++)
+    	seq_printf(m, "PGTBL[%d]=%016X \n", i, pgtbl[0] );
 
 	return 0;
 }
