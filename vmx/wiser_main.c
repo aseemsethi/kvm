@@ -132,10 +132,9 @@ unsigned int _eax, _ebx, _ecx, _edx, _esp, _ebp, _esi, _edi;
 long wiser_dev_ioctl( struct file *file, unsigned int count, 
 					  unsigned long buf) {
 
-/*
 	unsigned long *gdt, *ldt, *idt;
 	unsigned int *tss;
-*/
+    signed long desc = 0;
 	int ret;
 	
 	printk("wiser_dev_ioctl...\n");
@@ -234,6 +233,152 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
     guest_TR_access_rights   = 0x8B;
     guest_LDTR_selector = __SELECTOR_LDTR;
     guest_TR_selector   = __SELECTOR_TASK;
+
+	//initialize the gueststate LDTR
+	ldt = (unsigned long*)phys_to_virt(g_LDT_region);
+	ldt[__SELECTOR_CODE  >> 3 ] = 0x00CF9B000000FFFF;
+    ldt[ __SELECTOR_DATA >> 3 ] = 0x00CF93000000FFFF;
+    ldt[ __SELECTOR_VRAM >> 3 ] = 0x0000920B8000FFFF;
+    ldt[ __SELECTOR_FLAT >> 3 ] = 0x008F92000000FFFF;
+	// Adjust the CODE and DATA descriptors here
+    desc = ( LEGACY_REACH << 16 )&0x000000FFFFFF0000;
+    ldt[ __SELECTOR_CODE >> 3 ] |= desc;
+    ldt[ __SELECTOR_DATA >> 3 ] |= desc;
+
+	// initialize guest-state GDTR
+    gdt = (unsigned long*)phys_to_virt( g_GDT_region );
+    desc = 0x00008B0000000000;
+    desc |= (guest_TR_base << 32)&0xFF00000000000000;
+    desc |= (guest_TR_base << 16)&0x000000FFFFFF0000;
+    desc |= (guest_TR_limit & 0xFFFF);
+    gdt[ __SELECTOR_TASK >> 3 ] = desc;
+    desc = 0x0000820000000000;
+    desc |= ( guest_LDTR_base << 32)&0xFF00000000000000;
+    desc |= ( guest_LDTR_base << 16)&0x000000FFFFFF0000;
+    desc |= ( guest_LDTR_limit & 0xFFFF );
+    gdt[ __SELECTOR_LDTR >> 3 ] = desc;
+
+	// initialize guest IDT
+    idt = (unsigned long*)phys_to_virt( g_IDT_region );
+    desc = 0x00010000;  // load-address of isr <---- ???
+    desc &= 0x00000000FFFFFFFF;
+    desc |= (desc << 32);
+    desc &= 0xFFFF00000000FFFF;
+    desc |= ( __SELECTOR_CODE << 16);
+    desc |= 0x00008E0000000000;
+    idt[ 13 ] = desc;
+
+    // initialize our guest's Task-State Segment
+    tss = (unsigned int*)phys_to_virt( g_TSS_region );
+    tss[ 1 ] = TOS_KERN_OFFSET;  // stack pointer
+    tss[ 2 ] = __SELECTOR_DATA;  // selctor
+    tss[ 25 ] = 0x00880000;      // flags
+    tss[ guest_TR_limit >> 2 ] = 0xFF;
+
+
+    //----------------------------------------------------
+    //    initialize the global variables for the host state
+    // ----------------------------------------------------
+    asm(" mov %%cr0, %%rax \n mov %%rax, host_CR0 " ::: "ax" );
+    asm(" mov %%cr4, %%rax \n mov %%rax, host_CR4 " ::: "ax" );
+    asm(" mov %%cr3, %%rax \n mov %%rax, host_CR3 " ::: "ax" );
+    asm(" str host_TR_selector ");
+    asm(" mov %es, host_ES_selector ");
+    asm(" mov %cs, host_CS_selector ");
+    asm(" mov %ss, host_SS_selector ");
+    asm(" mov %ds, host_DS_selector ");
+    asm(" mov %fs, host_FS_selector ");
+    asm(" mov %gs, host_GS_selector ");
+    asm(" sgdt _gdtr \n sidt _idtr ");
+    host_GDTR_base = *(unsigned long*)( _gdtr+1 );
+    host_IDTR_base = *(unsigned long*)( _idtr+1 );
+
+    gdt = (unsigned long*)host_GDTR_base;
+    desc = gdt[ (host_TR_selector >> 3) + 0 ];
+    host_TR_base = ((desc >> 16)&0x00FFFFFF)|((desc >> 32)&0xFF000000);
+    desc = gdt[ (host_TR_selector >> 3) + 1 ];
+    desc <<= 48;    // maneuver to insure 'canonical' address
+    host_TR_base |= (desc >> 16)&0xFFFFFFFF00000000;
+
+    asm(    " mov   $0x174, %%ecx           \n"\
+        " rdmsr                 \n"\
+        " mov   %%eax, host_SYSENTER_CS     \n"\
+        " inc   %%ecx               \n"\
+        " rdmsr                 \n"\
+        " mov   %%eax, host_SYSENTER_ESP+0  \n"\
+        " mov   %%edx, host_SYSENTER_ESP+4  \n"\
+        " inc   %%ecx               \n"\
+        " rdmsr                 \n"\
+        " mov   %%eax, host_SYSENTER_EIP+0  \n"\
+        " mov   %%edx, host_SYSENTER_EIP+4  \n"\
+        ::: "ax", "cx", "dx" );
+
+    asm(    " mov   %0, %%ecx       \n"\
+        " rdmsr             \n"\
+        " mov   %%eax, host_FS_base+0   \n"\
+        " mov   %%edx, host_FS_base+4   \n"\
+        :: "i" (0xC0000100) : "ax", "cx", "dx" );
+
+    asm(    " mov   %0, %%ecx       \n"\
+        " rdmsr             \n"\
+        " mov   %%eax, host_GS_base+0   \n"\
+        " mov   %%edx, host_GS_base+4   \n"\
+        :: "i" (0xC0000101) : "ax", "cx", "dx" );
+
+    //------------------------------------------------------
+    //    initialize the global variables for the VMX controls
+    //------------------------------------------------------
+    control_VMX_pin_based = msr0x480[ 1 ];
+    // control_VMX_pin_based |= (1 << 0);   // exit on interrupts   
+    control_VMX_cpu_based = msr0x480[ 2 ];
+    control_pagefault_errorcode_match = 0xFFFFFFFF;
+    control_VM_exit_controls = msr0x480[ 3 ];
+    control_VM_exit_controls |= (1 << 9);   // exit to 64-bit host
+    control_VM_entry_controls = msr0x480[ 4 ];
+    control_CR0_mask = 0x80000021;
+    control_CR4_mask = 0x00002000;
+    control_CR0_shadow = 0x80000021;
+    control_CR4_shadow = 0x00002000;
+    control_CR3_target_count = 2;
+    control_CR3_target0 = guest_CR3;    // guest's directory
+    control_CR3_target1 = host_CR3;     // host's directory
+
+    //---------------------
+    //    launch the guest VM 
+    //---------------------
+
+
+	// show why the VMentry failed, or else why the VMexit occurred 
+	printk( "\n VM-instruction error: %08X ", info_vminstr_error );
+	printk( " Exit Reason: %08X \n", info_vmexit_reason );
+	printk( " VMexit-interruption-information: %08X \n",
+            info_vmexit_interrupt_information );
+	printk( " VMexit-interruption-error-code:  %08X \n",
+            info_vmexit_interrupt_error_code  );
+
+    // copy the client's virtual-machine register-values
+    guestRegs.eflags = (unsigned int)guest_RFLAGS;
+    guestRegs.eip = (unsigned int)guest_RIP;
+    guestRegs.esp = (unsigned int)guest_RSP;
+    guestRegs.eax = _eax;
+    guestRegs.ebx = _ebx;
+    guestRegs.ecx = _ecx;
+    guestRegs.edx = _edx;
+    guestRegs.ebp = _ebp;
+    guestRegs.esi = _esi;
+    guestRegs.edi = _edi;
+    guestRegs.es  = guest_ES_selector;
+    guestRegs.cs  = guest_CS_selector;
+    guestRegs.ss  = guest_SS_selector;
+    guestRegs.ds  = guest_DS_selector;
+    guestRegs.fs  = guest_FS_selector;
+    guestRegs.gs  = guest_GS_selector;
+    if ( copy_to_user( (void*)buf, &guestRegs, count ) ) {
+        mutex_unlock(&my_mutex);
+        return -EFAULT;
+    }
+
+    mutex_unlock(&my_mutex);
 
 	return 1;
 }
