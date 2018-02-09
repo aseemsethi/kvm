@@ -162,6 +162,7 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
 	}
 
 	// Copy in the guest register values
+	// 24.11.2 VMREAD, VMWRITE, and Encodings of VMCS Fields
 	guest_ES_selector = guestRegs.es;
     guest_CS_selector = guestRegs.cs;
     guest_SS_selector = guestRegs.ss; 
