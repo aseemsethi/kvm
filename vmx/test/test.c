@@ -49,6 +49,7 @@ int main( int argc, char **argv )
 	if (addr == MAP_FAILED) {
 		perror("mmap"); exit(1);
 	}
+	printf("mmaped address: %x\n", addr);
 
 	// get the vector for the desired interrupt
 	unsigned int interrupt_number = 0x11;
