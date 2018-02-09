@@ -1,3 +1,18 @@
+/* 
+ * [root@localhost test]# ./a.out 
+ * mmaped address: 0
+ * interrupt- 0x11
+ * vector=F000F84D
+ *
+ * This vector contents is the same as what gets installed...so, we know
+ * our mmap worked correctly.
+ ** BIOS Int 11 Handler F000:F84D *
+ *
+ * retval = 1   EIP=0000F84D EFLAGS=00023002 
+ * EAX=AAAAAAAA EBX=BBBBBBBB ECX=CCCCCCCC EDX=DDDDDDDD CS=F000 DS=DDDD FS=8888 
+ * ESP=00007FFA EBP=BBBBBBBB ESI=CCCCCCCC EDI=DDDDDDDD SS=0000 ES=EEEE GS=9999 
+ *
+ */ 
 #include <stdio.h>  // for printf(), perror() 
 #include <fcntl.h>  // for open() 
 #include <stdlib.h> // for exit() 
@@ -52,11 +67,13 @@ int main( int argc, char **argv )
 	printf("mmaped address: %x\n", addr);
 
 	// get the vector for the desired interrupt
-	unsigned int interrupt_number = 0x11;
+	unsigned int interrupt_number = 0x11; // int 17
+	// stored in index 17 * 4 = 68
 	unsigned int vector = *(unsigned int*)(interrupt_number << 2);
 	// Show the selected interrupt vector
-	printf("interrupt- 0x%02X\n", interrupt_number);
+	printf("interrupt=0x%02X\n", interrupt_number);
 	printf("vector=%08X\n", vector);
+	// Note that, each location has 2 bytes of IP and 2 bytes of CS
 
 	// plant the 'return' stack and code
 	// tos - top of stack, i.e. 0x8000
@@ -64,7 +81,10 @@ int main( int argc, char **argv )
 	// eoi - end of interrupt, IP pointer
 	unsigned int *eoi = (unsigned int*)0x8000;
 	eoi[0] = 0x90C1010F;	// 'vmcall' instruction
-	// setup the top 3 entries in the stack, ending with the IP ptr
+	// When interrupts occur in real mode, FLAGS, followed by CS
+	// and then IP is pushed into the stack..that is what we see
+	// below.
+	// Setup the top 3 entries in the stack, ending with the IP ptr
 	tos[-1] = 0x0000;  // image of FLAGS
 	tos[-2] = 0x0000;  // image of CS
 	tos[-3] = 0x8000;  // IP points to the 'vmcall'
@@ -90,10 +110,10 @@ int main( int argc, char **argv )
     vm.gs   = 0x9999;
 
     // invoke the virtual-machine
-	int retval = ioctl( fd, sizeof( vm ), &vm );
+    int retval = ioctl( fd, sizeof( vm ), &vm );
 
-	// display the register-values on return from the VMM
-	    printf( "\nretval = %-3d ", retval );
+    // display the register-values on return from the VMM
+    printf( "\nretval = %-3d ", retval );
     printf( "EIP=%08X ", vm.eip );
     printf( "EFLAGS=%08X ", vm.eflags );
 
