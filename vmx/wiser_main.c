@@ -23,7 +23,7 @@
 #include <asm/io.h>		// for virt_to_phys()
 #include <asm/uaccess.h>		// for copy_from_user()
 #include <linux/miscdevice.h>		// for copy_from_user()
-//#include "machine.h"		// for VMCS fields
+#include "machine.h"		// for VMCS fields
 #include <linux/slab.h>		// for kmalloc()
 #include <linux/delay.h>
 
@@ -160,6 +160,80 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
 		mutex_unlock(&my_mutex);
 		return -EFAULT;
 	}
+
+	// Copy in the guest register values
+	guest_ES_selector = guestRegs.es;
+    guest_CS_selector = guestRegs.cs;
+    guest_SS_selector = guestRegs.ss; 
+    guest_DS_selector = guestRegs.ds;
+    guest_FS_selector = guestRegs.fs; 
+    guest_GS_selector = guestRegs.gs; 
+    _eax = guestRegs.eax;
+    _ebx = guestRegs.ebx;
+    _ecx = guestRegs.ecx;
+    _edx = guestRegs.edx;
+    _ebp = guestRegs.ebp;
+    _esi = guestRegs.esi;
+    _edi = guestRegs.edi;
+    guest_RSP = guestRegs.esp;
+    guest_RIP = guestRegs.eip;
+    guest_RFLAGS = guestRegs.eflags; 
+    guest_RFLAGS |= (1 << 17);  // VM=1 (for Virtual-8086 mode)
+    guest_RFLAGS |= (1 <<  1);  // it's essential to set bit #1
+
+	// setup other guest-state fields (for V-8086 mode)
+	// The segment address is added to a 16-bit offset in the instruction 
+	// to yield a linear address, which is the same as physical address 
+	// in this mode. That is the reason, the selector is left shifted to 
+	// get the base address, that is added to the instruction.
+	// 24.4 GUEST-STATE AREA and 27.3 SAVING GUEST STATE - Intel Arch
+    guest_ES_base = (guest_ES_selector << 4);
+    guest_CS_base = (guest_CS_selector << 4);
+    guest_SS_base = (guest_SS_selector << 4);
+    guest_DS_base = (guest_DS_selector << 4);
+    guest_FS_base = (guest_FS_selector << 4);
+    guest_GS_base = (guest_GS_selector << 4);
+    guest_ES_limit = 0xFFFF;
+    guest_CS_limit = 0xFFFF;
+    guest_SS_limit = 0xFFFF;
+    guest_DS_limit = 0xFFFF;
+    guest_FS_limit = 0xFFFF;
+    guest_GS_limit = 0xFFFF;
+    guest_ES_access_rights = 0xF3;
+    guest_CS_access_rights = 0xF3;
+    guest_SS_access_rights = 0xF3;
+    guest_DS_access_rights = 0xF3;
+    guest_FS_access_rights = 0xF3;
+    guest_GS_access_rights = 0xF3;
+
+    // CR0:
+    // 0    PE  Protected Mode Enable
+    // 4    ET  Extension type
+    // 5    NE  Numeric error
+    // 31   PG  Paging
+    guest_CR0 = 0x80000031;
+    // CR4: 
+    // 0    VME Virtual 8086 Mode Extensions
+    // 4    PSE Page Size Extension - page size is increased to 4 MiB
+    // 13   VMXE    Virtual Machine Extensions Enable
+    guest_CR4 = 0x00002011;
+    guest_CR3 = pgdir_region;
+    guest_VMCS_link_pointer_full = 0xFFFFFFFF;
+    guest_VMCS_link_pointer_high = 0xFFFFFFFF;
+
+    guest_IDTR_base = LEGACY_REACH + IDT_KERN_OFFSET;
+    guest_GDTR_base = LEGACY_REACH + GDT_KERN_OFFSET;
+    guest_LDTR_base = LEGACY_REACH + LDT_KERN_OFFSET;
+    guest_TR_base   = LEGACY_REACH + TSS_KERN_OFFSET;
+    guest_IDTR_limit = (256 * 8) - 1;
+    guest_GDTR_limit = (3 * 8) - 1;
+    guest_LDTR_limit = (4 * 8) - 1;
+    guest_TR_limit   = (26 * 4) + 0x20 + 0x2000;
+    guest_LDTR_access_rights = 0x82;
+    guest_TR_access_rights   = 0x8B;
+    guest_LDTR_selector = __SELECTOR_LDTR;
+    guest_TR_selector   = __SELECTOR_TASK;
+
 	return 1;
 }
 int wiser_dev_mmap(struct file *file, struct vm_area_struct *vma ){
