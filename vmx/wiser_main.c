@@ -119,7 +119,7 @@ void setupPageTables() {
             case 17:
             phys_addr = virt_to_phys( kmem[ 10 ] ); break;
         }
-	printk("phys addr[%d] = 0x%016lx\n", i, phys_addr);
+	printk("phys addr[%d] = 0x%016x\n", i, phys_addr);
         for (j = 0; j < 16; j++)
             pgtbl[ i*16 + j ] = phys_addr + (j << PAGE_SHIFT) + 7;
 	}
@@ -165,7 +165,7 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
 int wiser_dev_mmap(struct file *file, struct vm_area_struct *vma ){
 	unsigned long user_virtaddr = vma->vm_start;
 	unsigned long region_length  = vma->vm_end - vma->vm_start;
-	//unsigned long physical_addr, pfn;
+	unsigned long physical_addr, pfn;
 	int i;
 
 	printk("\n wiser_dev_mmap called\n");
@@ -173,7 +173,28 @@ int wiser_dev_mmap(struct file *file, struct vm_area_struct *vma ){
 	if (region_length != LEGACY_REACH) return -EINVAL;
 	printk("wiser_dev_mmap: user start virtual is 0x0 and length is 1M\n");
 
-	return 1;
+	// let the kernel know not to try swapping out this region
+	vma->vm_flags |= (VM_DONTEXPAND | VM_DONTDUMP);
+
+	// let the kernel know to add page_table entries to 'map' these areas
+	// Maps kernel physical memroy in kmem[] to user_virtaddr (starting at 
+	// 0x00000000L) in userspace.
+	// Need to set proc/sys/vm/mmap_min_addr to allow low addr mapping
+	for (i=0;i<N_ARENAS+6;i++) {
+		int j = i%16;
+		if(j < 0xA) physical_addr = virt_to_phys(kmem[j]);
+		else physical_addr = user_virtaddr;
+		pfn = (physical_addr >> PAGE_SHIFT);
+		if (remap_pfn_range(vma, user_virtaddr, pfn,
+			ARENA_LENGTH, vma->vm_page_prot)) return -EAGAIN;
+		user_virtaddr += ARENA_LENGTH;
+	}
+	// copy page frame 0x000 to bottom of arena 0x0 (FOR IVT and BDA)
+	memcpy(kmem[0], phys_to_virt(0x0000), PAGE_SIZE);
+	// copy page frames 0x90 (144) to 0x9a (159)F to arena 0x9 (for EBDA)
+	memcpy(kmem[9], phys_to_virt(0x90000), ARENA_LENGTH);
+	
+	return 0; // success
 }
 
 struct file_operations wiser_dev_ops = {
