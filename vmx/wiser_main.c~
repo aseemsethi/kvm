@@ -129,7 +129,6 @@ void setupPageTables() {
 
 unsigned short _gdtr[5], _idtr[5];
 unsigned int _eax, _ebx, _ecx, _edx, _esp, _ebp, _esi, _edi;
-int retval = -1;
 long wiser_dev_ioctl( struct file *file, unsigned int count, 
 					  unsigned long buf) {
 
@@ -364,81 +363,79 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
     //retval - is the return value, and is set various numbers to indicate
     //the progress in case something fails
     asm volatile(".type my_vmm, @function	\n"\
-	"pushfq								\n"\
-	"push %rax							\n"\
-	"push %rbx							\n"\
-	"push %rcx							\n"\
-	"push %rdx							\n"\
-	"push %rbp							\n"\
-	"push %rsi							\n"\
-	"push %r11							\n"\
-	"lea my_vmm, %rax					\n"\
-	"mov %rax, host_RIP					\n"\
-	"mov %rsp, host_RSP					\n"\
-/*
-	"vmxon vmxon_region					\n"\
-	"jc	fail						\n"\
-	"jz	over						\n"\
-	"movl $1, retval					\n"\
-	"vmclear guest_region					\n"\
-	"movl $2, retval					\n"\
-	"vmptrld guest_region					\n"\
-	"movl $3, retval					\n"\
-	"							\n"\
-	"xor %rdx, %rdx						\n"\
-	"mov elements, %rcx					\n"\
-	"nxwr:							\n"\
-	"mov machine+0(%rdx), %rax				\n"\
-	"mov machine+8(%rdx), %rbx				\n"\
-	"vmwrite (%rbx), %rbx					\n"\
-	"add $16, %rdx						\n"\
-	"loop nxwr						\n"\
-	"							\n"\
-	"movl $4, retval					\n"\
-	"mov _eax, %eax						\n"\
-	"mov _ebx, %ebx						\n"\
-	"mov _ecx, %ecx						\n"\
-	"mov _edx, %edx						\n"\
-	"mov _ebp, %ebp						\n"\
-	"mov _esi, %esi						\n"\
-	"mov _edi, %edi						\n"\
-	"vmlaunch						\n"\
-	"movl $5, retval					\n"\
-	"jmp read						\n"\
-*/
-	"my_vmm:						\n"\
-	"							\n"\
-	"mov %eax, _eax						\n"\
-	"mov %ebx, _ebx						\n"\
-	"mov %ecx, _ecx						\n"\
-	"mov %edx, _edx						\n"\
-	"mov %ebp, _ebp						\n"\
-	"mov %esi, _esi						\n"\
-	"mov %edi, _edi						\n"\
-	"read:							\n"\
-	"xor   %rdx, %rdx          \n"
-	" mov   rocount, %rcx           \n"\
-	"nxrd:                  \n"\
-	" mov   results+0(%rdx), %rax       \n"\
-	" mov   results+8(%rdx), %rbx       \n"\
-	" vmread %rax, (%rbx)           \n"\
-	" add   $16, %rdx           \n"\
-	" loop  nxrd                \n"\
-	"                   \n"\
-	" movl  $0, retval          \n"\
-	"over:                  \n"\
-//	" vmxoff                \n"
-	"fail:                  \n"\
-	" pop   %r11                \n"\
-	" pop   %rdi                \n"\
-	" pop   %rsi                \n"\
-	" pop   %rbp                \n"\
-	" pop   %rdx                \n"\
-	" pop   %rcx                \n"\
-	" pop   %rbx                \n"\
-	" pop   %rax                \n"\
-	" popfq                 \n"\
+	"push %rax									\n"\
+	"push %rbx									\n"\
+	"push %rcx									\n"\
+	"push %rdx									\n"\
+	"push %rbp									\n"\
+	"push %rsi									\n"\
+	"push %r11									\n"\
+	"lea my_vmm, %rax							\n"\
+	"mov %rax, host_RIP							\n"\
+	"mov %rsp, host_RSP							\n"\
+	"vmxon vmxon_region							\n"\
+	"jc	fail									\n"\
+	"jz	over									\n"\
+	"movl $1, retval							\n"\
+	"vmclear guest_region						\n"\
+	"movl $2, retval							\n"\
+	"vmptrld guest_region						\n"\
+	"movl $3, retval							\n"\
+	"											\n"\
+	"xor %rdx, %rdx								\n"\
+	"mov elements, %rcx							\n"\
+	"nxwr:										\n"\
+	"mov machine+0(%rdx), %rax					\n"\
+	"mov machine+8(%rdx), %rbx					\n"\
+	"vmwrite (%rbx), %rbx						\n"\
+	"add $16, %rdx								\n"\
+	"loop nxwr									\n"\
+	"											\n"\
+	"movl $4, retval							\n"\
+	"mov _eax, %eax								\n"\
+	"mov _ebx, %ebx								\n"\
+	"mov _ecx, %ecx								\n"\
+	"mov _edx, %edx								\n"\
+	"mov _ebp, %ebp								\n"\
+	"mov _esi, %esi								\n"\
+	"mov _edi, %edi								\n"\
+	"vmlaunch									\n"\
+	"movl $5, retval							\n"\
+	"jmp read									\n"\
+	"my_vmm:									\n"\
+	"											\n"\
+	"mov %eax, _eax								\n"\
+	"mov %ebx, _ebx								\n"\
+	"mov %ecx, _ecx								\n"\
+	"mov %edx, _edx								\n"\
+	"mov %ebp, _ebp								\n"\
+	"mov %esi, _esi								\n"\
+	"mov %edi, _edi								\n"\
+	"read:										\n"\
+    " xor   %rdx, %rdx          \n"\
+    " mov   rocount, %rcx           \n"\
+    "nxrd:                  \n"\
+    " mov   results+0(%rdx), %rax       \n"\
+    " mov   results+8(%rdx), %rbx       \n"\
+    " vmread %rax, (%rbx)           \n"\
+    " add   $16, %rdx           \n"\
+    " loop  nxrd                \n"\
+    "                   \n"\
+    " movl  $0, retval          \n"\
+    "over:                  \n"\
+    " vmxoff                \n"\
+    "fail:                  \n"\
+    " pop   %r11                \n"\
+    " pop   %rdi                \n"\
+    " pop   %rsi                \n"\
+    " pop   %rbp                \n"\
+    " pop   %rdx                \n"\
+    " pop   %rcx                \n"\
+    " pop   %rbx                \n"\
+    " pop   %rax                \n"\
+    " popfq                 \n"\
     );
+
 
 
 	// show why the VMentry failed, or else why the VMexit occurred 
@@ -621,6 +618,7 @@ static int wiser_show(struct seq_file *m, void *v) {
     seq_printf(m, "EFER=%016lX \n ", vm.msr_efer );
 
     seq_printf(m, "vmxon_region=%016lX \n", vmxon_region );
+    seq_printf(m, "\n" );
     seq_printf(m, "guest_region=%016lX \n", guest_region );
     seq_printf(m, "pgdir_region=%016lX \n", pgdir_region );
     seq_printf(m, "pgtbl_region=%016lX \n", pgtbl_region );
