@@ -10,5 +10,21 @@ https://gist.github.com/pdumais/190abac0353618062b5d36807d6b7687#file-vmx-s
 https://www.codeproject.com/Articles/215458/Virtualization-for-System-Programmers
 
 ----
-
-
+nfo_vminstr_error error codes after any VM instruction
+-------------------------------------------------------
+Error Number	Description
+0x01	VMCALL executed in VMX root operation
+0x02	VMCLEAR with invalid physical address.
+0x03	VMCLEAR with VMXON pointer.
+0x04	VMLAUNCH with non-clear VMCS.
+0x05	VMRESUME with non-launched VMCS.
+0x06	VMRESUME with a corrupted VMCS. Indicates corruption of the current VMCS
+0x07	VM entry with invalid VMX-control field(s).
+0x08	VM entry with invalid host-state field(s).
+0x09	VMPTRLD with invalid physical address.
+0x0A	VMPTRLD with VMXON pointer.
+0x0B	VMPTRLD with incorrect VMCS revision identifier.
+0x0C	VMREAD/VMWRITE from/to unsupported VMCS component.
+0x0D	VMWRITE to read-only VMCS component.
+0x0F	VMXON executed in VMX root operation.
+0x1A	VM entry with events blocked by MOV SS. 

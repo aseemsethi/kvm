@@ -344,8 +344,98 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
     control_CR3_target1 = host_CR3;     // host's directory
 
     //---------------------
-    //    launch the guest VM 
+    // launch the guest VM 
     //---------------------
+    //my_vmm is the asm function
+    //lea instruction below, loads the my_vmm pointer into RAX
+    //which is then moved into host RIP reigster
+    //host RSP gets the stack pointer
+    //And finally, we call 'vmxon'
+    //There are two flags used to signify the success or failure of a VM 
+    //instruction. The carry flag(CF) and the zero flag(ZF).
+    //If both of these flags are clear after a VM instruction was executed 
+    //then it succeeded.  
+    //If carry flag is set then current VMCS pointer //is invalid.
+    //If the zero flag is set, it indicates that the VMCS pointer is valid 
+    //but there is some other error specified in the VM-instruction error 
+    //field (encoding 4400h) - info_vminstr_error
+    //
+    //retval - is the return value, and is set various numbers to indicate
+    //the progress in case something fails
+    asm volatile(".type my_vmm, @function	\n"\
+	"push %rax									\n"\
+	"push %rbx									\n"\
+	"push %rcx									\n"\
+	"push %rdx									\n"\
+	"push %rbp									\n"\
+	"push %rsi									\n"\
+	"push %r11									\n"\
+	"lea my_vmm, %rax							\n"\
+	"mov %rax, host_RIP							\n"\
+	"mov %rsp, host_RSP							\n"\
+	"vmxon vmxon_region							\n"\
+	"jc	fail									\n"\
+	"jz	over									\n"\
+	"movl $1, retval							\n"\
+	"vmclear guest_region						\n"\
+	"movl $2, retval							\n"\
+	"vmptrld guest_region						\n"\
+	"movl $3, retval							\n"\
+	"											\n"\
+	"xor %rdx, %rdx								\n"\
+	"mov elements, %rcx							\n"\
+	"nxwr:										\n"\
+	"mov machine+0(%rdx), %rax					\n"\
+	"mov machine+8(%rdx), %rbx					\n"\
+	"vmwrite (%rbx), %rbx						\n"\
+	"add $16, %rdx								\n"\
+	"loop nxwr									\n"\
+	"											\n"\
+	"movl $4, retval							\n"\
+	"mov _eax, %eax								\n"\
+	"mov _ebx, %ebx								\n"\
+	"mov _ecx, %ecx								\n"\
+	"mov _edx, %edx								\n"\
+	"mov _ebp, %ebp								\n"\
+	"mov _esi, %esi								\n"\
+	"mov _edi, %edi								\n"\
+	"vmlaunch									\n"\
+	"movl $5, retval							\n"\
+	"jmp read									\n"\
+	"my_vmm:									\n"\
+	"											\n"\
+	"mov %eax, _eax								\n"\
+	"mov %ebx, _ebx								\n"\
+	"mov %ecx, _ecx								\n"\
+	"mov %edx, _edx								\n"\
+	"mov %ebp, _ebp								\n"\
+	"mov %esi, _esi								\n"\
+	"mov %edi, _edi								\n"\
+	"read:										\n"\
+    " xor   %rdx, %rdx          \n"\
+    " mov   rocount, %rcx           \n"\
+    "nxrd:                  \n"\
+    " mov   results+0(%rdx), %rax       \n"\
+    " mov   results+8(%rdx), %rbx       \n"\
+    " vmread %rax, (%rbx)           \n"\
+    " add   $16, %rdx           \n"\
+    " loop  nxrd                \n"\
+    "                   \n"\
+    " movl  $0, retval          \n"\
+    "over:                  \n"\
+    " vmxoff                \n"\
+    "fail:                  \n"\
+    " pop   %r11                \n"\
+    " pop   %rdi                \n"\
+    " pop   %rsi                \n"\
+    " pop   %rbp                \n"\
+    " pop   %rdx                \n"\
+    " pop   %rcx                \n"\
+    " pop   %rbx                \n"\
+    " pop   %rax                \n"\
+    " popfq                 \n"\
+    );
+
 
 
 	// show why the VMentry failed, or else why the VMexit occurred 
