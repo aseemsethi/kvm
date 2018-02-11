@@ -363,7 +363,6 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
     //
     //retval - is the return value, and is set various numbers to indicate
     //the progress in case something fails
- /*
     asm volatile(".type my_vmm, @function	\n"\
 	"pushfq								\n"\
 	"push %rax							\n"\
@@ -372,36 +371,12 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
 	"push %rdx							\n"\
 	"push %rbp							\n"\
 	"push %rsi							\n"\
-	"push %rdi							\n"\
 	"push %r11							\n"\
-	"lea my_vmm, %rax					\n"\
-	"vmxon vmxon_region					\n"\
-	"my_vmm:	\n"\
-	" pop   %r11                \n"\
-	" pop   %rdi                \n"\
-	" pop   %rsi                \n"\
-	" pop   %rbp                \n"\
-	" pop   %rdx                \n"\
-	" pop   %rcx                \n"\
-	" pop   %rbx                \n"\
-	" pop   %rax                \n"\
-	" popfq                 \n"\
-    );
-*/
-    asm volatile(".type my_vmm, @function	\n"\
-	"pushfq								\n"\
-	"push %rax							\n"\
-	"push %rbx							\n"\
-	"push %rcx							\n"\
-	"push %rdx							\n"\
-	"push %rbp							\n"\
-	"push %rsi							\n"\
-	"push %rdi							\n"\
-	"push %r11							\n"\
-	"lea my_vmm, %rax					\n"\
+//	"lea my_vmm, %rax					\n"
 	"mov %rax, host_RIP					\n"\
 	"mov %rsp, host_RSP					\n"\
 	"vmxon vmxon_region					\n"\
+/*
 	"jc	fail						\n"\
 	"jz	over						\n"\
 	"movl $1, retval					\n"\
@@ -452,6 +427,7 @@ long wiser_dev_ioctl( struct file *file, unsigned int count,
 	" movl  $0, retval          \n"\
 	"over:                  \n"\
 	" vmxoff                \n"
+*/
 	"fail:                  \n"\
 	" pop   %r11                \n"\
 	" pop   %rdi                \n"\
